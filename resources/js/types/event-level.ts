@@ -1,0 +1,1 @@
+export type EventLevel = 'danger' | 'success' | 'primary' | 'warning';

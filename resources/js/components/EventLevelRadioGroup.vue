@@ -14,7 +14,7 @@ const emit = defineEmits<{
 }>()
 
 // Options
-const options: EventLevel[] = ['danger', 'success', 'primary', 'warning']
+const options: EventLevel[] = ['success', 'primary', 'warning', 'danger']
 
 // Handle change
 const updateValue = (value: any) => {

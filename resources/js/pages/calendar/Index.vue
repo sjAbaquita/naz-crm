@@ -4,12 +4,12 @@ import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import FullCalendar from '@fullcalendar/vue3';
-import { Head } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { Plus } from 'lucide-vue-next';
 import { ref, onMounted, onBeforeUnmount, nextTick, watch, computed } from 'vue';
 import EventLevelRadioGroup from '@/components/EventLevelRadioGroup.vue';
 import { Textarea } from '@/components/ui/textarea';
-import calendar from '@/routes/calendar';
+import {destroy, index, store, update} from '@/routes/calendar';
 import type { Team } from '@/types';
 import type { CalendarEvent } from '@/types/calendar-events';
 import type { EventLevel } from '@/types/event-level';
@@ -17,24 +17,27 @@ import type { EventLevel } from '@/types/event-level';
 const calendarRef = ref<any>(null)
 let observer: ResizeObserver
 
-type Props = {
+const props = defineProps<{
     events: CalendarEvent[];
-};
-
-const props = defineProps<Props>()
+	currentTeam: {
+		id: number | string
+		slug?: string
+	}
+}>()
 
 // Modal State
 const showModal = ref(false)
 const isEdit = ref(false)
 const selectedEventId = ref<number | null>(null)
+const isSubmitting = ref(false)
 
 
 // Form State
 const form = ref({
 	title: '',
-	start: '',
-	end: '',
-	level: '' as EventLevel | '',
+	start_date: '',
+	end_date: '',
+	event_level: 'success' as EventLevel | 'success',
 	description: '',
 	location: '',
 })
@@ -51,51 +54,132 @@ const closeModal = () => {
 
 // Reset
 const resetForm = () => {
-	form.value = { title: '', description: '', location: '', start: '', end: '', level: '' }
+	form.value = { title: '', description: '', location: '', start_date: '', end_date: '', event_level: 'success' }
 	isEdit.value = false
 	selectedEventId.value = null
 }
 
 // Add Event
-const addEvent = () => {
-	events.value.push({
-		id: Date.now(),
-		title: form.value.title,
-		start_date: form.value.start,
-		end_date: form.value.end,
-		description: form.value.description,
-		location: form.value.location,
-		event_level: form.value.level,
-		extendedProps: { 
-			calendar: form.value.level as EventLevel,
-			description: form.value.description,
-			location: form.value.location,
-		},
-	})
-	closeModal()
+const addEvent = async () => {
+	if (isSubmitting.value) {
+		return
+	}
+
+	isSubmitting.value = true
+
+	await router.post(store({
+			current_team: props.currentTeam.slug!,
+		}).url,
+		form.value,
+		{
+			onSuccess: () => {
+				closeModal()
+			},
+			onError: (errors) => {
+				console.log(errors)
+			},
+			onFinish: () => {
+				isSubmitting.value = false
+			},
+		}
+	)
+
+	// await router.post('calendar', {
+	// 	title: form.value.title,
+	// 	start_date: form.value.start,
+	// 	end_date: form.value.end,
+	// 	description: form.value.description,
+	// 	location: form.value.location,
+	// 	event_level: form.value.level,
+	// }, {
+	// 	onSuccess: () => {
+	// 		console.log('Event created!')
+	// 		closeModal()
+	// 	},
+
+	// 	onError: (errors) => {
+	// 		console.log(errors)
+	// 	},
+	// })
+	// events.value.push(response.data)
 }
 
 // Update Event
-const updateEvent = () => {
-	const index = events.value.findIndex(e => e.id === selectedEventId.value)
-	
-	if (index !== -1) {
-		events.value[index] = {
-			...events.value[index],
-			title: form.value.title,
-			description: form.value.description,
-			location: form.value.location,
-			start_date: form.value.start,
-			end_date: form.value.end,
-			extendedProps: { 
-				calendar: form.value.level as EventLevel,
-				description: form.value.description,
-				location: form.value.location,
-			},
-		}
+const updateEvent = async () => {
+	if (!selectedEventId.value) {
+		return
 	}
 
-	closeModal()
+	if (isSubmitting.value) {
+		return
+	}
+
+	isSubmitting.value = true
+
+	await router.put(
+		update({
+			current_team: props.currentTeam.slug!,
+			calendar: selectedEventId.value,
+		}).url,
+		form.value,
+		{
+			onSuccess: () => {
+				closeModal()
+			},
+			onError: (errors) => {
+				console.log(errors)
+			},
+			onFinish: () => {
+				isSubmitting.value = false
+			},
+		}
+	)
+	// await router.put(`calendar/${selectedEventId.value}`, {
+	// 	title: form.value.title,
+	// 	start_date: form.value.start,
+	// 	end_date: form.value.end,
+	// 	description: form.value.description,
+	// 	location: form.value.location,
+	// 	event_level: form.value.level,
+	// }, {
+	// 	onSuccess: () => {
+	// 		console.log('Event updated!')
+	// 		closeModal()
+	// 	},
+
+	// 	onError: (errors) => {
+	// 		console.log(errors)
+	// 	},
+	// })
+}
+
+// Delete Event
+const deleteEvent = async () => {
+	if (!selectedEventId.value) {
+		return
+	}
+
+	if (isSubmitting.value) {
+		return
+	}
+
+	isSubmitting.value = true
+	await router.delete(destroy({
+			current_team: props.currentTeam.slug!,
+			calendar: selectedEventId.value,
+		}).url,
+		{
+			onSuccess: () => {
+				closeModal()
+			},
+			onError: (errors) => {
+				console.log(errors)
+			},
+			onFinish: () => {
+				isSubmitting.value = false
+			},
+		}
+	)
 }
 
 const updateCalendarSize = () => {
@@ -143,11 +227,11 @@ const mapEventToForm = (id: number) => {
 	const selectedEvent = events.value.find(event => event.id === Number(id));
 	
 	form.value.title = selectedEvent?.title ?? '';
-	form.value.start = toDateOnly(selectedEvent?.start_date) ?? '';
-	form.value.end = toDateOnly(selectedEvent?.end_date) ?? '';
+	form.value.start_date = toDateOnly(selectedEvent?.start_date) ?? '';
+	form.value.end_date = toDateOnly(selectedEvent?.end_date) ?? '';
 	form.value.description = selectedEvent?.description ?? '';
 	form.value.location = selectedEvent?.location ?? '';
-	form.value.level = selectedEvent?.event_level as EventLevel ?? '';
+	form.value.event_level = selectedEvent?.event_level as EventLevel ?? '';
 }
 
 // Calendar Config
@@ -163,8 +247,8 @@ const calendarOptions = computed(() => ({
 
 	select: (info: any) => {
 		resetForm()
-		form.value.start = info.startStr
-		form.value.end = info.endStr || info.startStr
+		form.value.start_date = info.startStr
+		form.value.end_date = info.endStr || info.startStr
 		openModal()
 	},
 
@@ -219,7 +303,7 @@ const calendarOptions = computed(() => ({
 
 const openForm = () => {
 	resetForm()
-	form.value.start = new Date().toISOString().split('T')[0]
+	form.value.start_date = new Date().toISOString().split('T')[0]
 	openModal()
 }
 
@@ -251,7 +335,7 @@ defineOptions({
             {
                 title: 'Calendar',
                 href: props.currentTeam
-                    ? calendar.index(props.currentTeam.slug)
+                    ? index(props.currentTeam.slug)
                     : '/',
             },
         ],
@@ -344,7 +428,7 @@ watch(
 							</label>
 							<div class="flex flex-wrap items-center gap-4 sm:gap-5">
 
-								<EventLevelRadioGroup v-model="form.level" />
+								<EventLevelRadioGroup v-model="form.event_level" />
 
 							</div>
 						</div>
@@ -355,7 +439,7 @@ watch(
 								Enter Start Date
 							</label>
 							<div class="relative">
-								<input v-model="form.start" id="event-start-date" type="date" class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 cursor-pointer" onclick="this.showPicker()" />
+								<input v-model="form.start_date" id="event-start-date" type="date" class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 cursor-pointer" onclick="this.showPicker()" />
 								<span class="absolute top-1/2 right-3.5 -translate-y-1/2 pointer-events-none">
 									<svg class="fill-gray-700 dark:fill-gray-400" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
 										<path fill-rule="evenodd" clip-rule="evenodd" d="M4.33317 0.0830078C4.74738 0.0830078 5.08317 0.418794 5.08317 0.833008V1.24967H8.9165V0.833008C8.9165 0.418794 9.25229 0.0830078 9.6665 0.0830078C10.0807 0.0830078 10.4165 0.418794 10.4165 0.833008V1.24967L11.3332 1.24967C12.2997 1.24967 13.0832 2.03318 13.0832 2.99967V4.99967V11.6663C13.0832 12.6328 12.2997 13.4163 11.3332 13.4163H2.6665C1.70001 13.4163 0.916504 12.6328 0.916504 11.6663V4.99967V2.99967C0.916504 2.03318 1.70001 1.24967 2.6665 1.24967L3.58317 1.24967V0.833008C3.58317 0.418794 3.91896 0.0830078 4.33317 0.0830078ZM4.33317 2.74967H2.6665C2.52843 2.74967 2.4165 2.8616 2.4165 2.99967V4.24967H11.5832V2.99967C11.5832 2.8616 11.4712 2.74967 11.3332 2.74967H9.6665H4.33317ZM11.5832 5.74967H2.4165V11.6663C2.4165 11.8044 2.52843 11.9163 2.6665 11.9163H11.3332C11.4712 11.9163 11.5832 11.8044 11.5832 11.6663V5.74967Z" fill="" />
@@ -370,7 +454,7 @@ watch(
 								Enter End Date
 							</label>
 							<div class="relative">
-								<input v-model="form.end" id="event-end-date" type="date" class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 cursor-pointer" onclick="this.showPicker()" />
+								<input v-model="form.end_date" id="event-end-date" type="date" class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 cursor-pointer" onclick="this.showPicker()" />
 								<span class="absolute top-1/2 right-3.5 -translate-y-1/2 pointer-events-none">
 									<svg class="fill-gray-700 dark:fill-gray-400" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
 										<path fill-rule="evenodd" clip-rule="evenodd" d="M4.33317 0.0830078C4.74738 0.0830078 5.08317 0.418794 5.08317 0.833008V1.24967H8.9165V0.833008C8.9165 0.418794 9.25229 0.0830078 9.6665 0.0830078C10.0807 0.0830078 10.4165 0.418794 10.4165 0.833008V1.24967L11.3332 1.24967C12.2997 1.24967 13.0832 2.03318 13.0832 2.99967V4.99967V11.6663C13.0832 12.6328 12.2997 13.4163 11.3332 13.4163H2.6665C1.70001 13.4163 0.916504 12.6328 0.916504 11.6663V4.99967V2.99967C0.916504 2.03318 1.70001 1.24967 2.6665 1.24967L3.58317 1.24967V0.833008C3.58317 0.418794 3.91896 0.0830078 4.33317 0.0830078ZM4.33317 2.74967H2.6665C2.52843 2.74967 2.4165 2.8616 2.4165 2.99967V4.24967H11.5832V2.99967C11.5832 2.8616 11.4712 2.74967 11.3332 2.74967H9.6665H4.33317ZM11.5832 5.74967H2.4165V11.6663C2.4165 11.8044 2.52843 11.9163 2.6665 11.9163H11.3332C11.4712 11.9163 11.5832 11.8044 11.5832 11.6663V5.74967Z" fill="" />
@@ -384,18 +468,31 @@ watch(
 					<!-- Modal Footer -->
 					<div class="flex items-center gap-3 mt-6 modal-footer" :class="isEdit ? 'sm:justify-between' : 'sm:justify-end'">
 						<div v-if="isEdit">
-							<button @click="closeModal()" type="button" class="modal-close-btn flex w-full justify-center rounded-lg border border-gray-300 bg-red-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-400 sm:w-auto dark:border-gray-700 dark:bg-red-500 dark:text-white dark:hover:bg-red-400 cursor-pointer">
+							<button @click="deleteEvent()"
+									:disabled="isSubmitting"
+									type="button"
+									class="modal-close-btn flex w-full justify-center rounded-lg border border-gray-300 bg-red-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-400 sm:w-auto disabled:opacity-50 dark:border-gray-700 dark:bg-red-500 dark:text-white dark:hover:bg-red-400 cursor-pointer">
 								Delete
 							</button>
 						</div>
 						<div class="flex items-center gap-3">
-							<button @click="closeModal()" type="button" class="modal-close-btn flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 sm:w-auto dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/3 cursor-pointer">
+							<button @click="closeModal()"
+									type="button"
+									class="modal-close-btn flex w-full justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 sm:w-auto dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/3 cursor-pointer">
 								Close
 							</button>
-							<button @click="updateEvent()" v-if="isEdit" type="button" class="btn btn-add-event bg-brand-500 hover:bg-brand-600 flex w-full justify-center rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-white sm:w-auto bg-gray-50 hover:border-gray-300 hover:bg-slate-200 dark:bg-slate-500 dark:hover:bg-white/3 cursor-pointer">
+							<button @click="updateEvent()"
+									v-if="isEdit"
+									:disabled="isSubmitting"
+									type="button"
+									class="btn btn-add-event bg-brand-500 hover:bg-brand-600 flex w-full justify-center rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-white sm:w-auto disabled:opacity-50 bg-gray-50 hover:border-gray-300 hover:bg-slate-200 dark:bg-slate-500 dark:hover:bg-white/3 cursor-pointer">
 								Update Changes
 							</button>
-							<button @click="addEvent()" v-if="!isEdit" type="button" class="btn btn-add-event bg-brand-500 hover:bg-brand-600 flex w-full justify-center rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-white sm:w-auto bg-gray-50 hover:border-gray-300 hover:bg-slate-200 dark:bg-slate-500 dark:hover:bg-white/3 cursor-pointer">
+							<button @click="addEvent()"
+									v-if="!isEdit"
+									:disabled="isSubmitting"
+									type="button"
+									class="btn btn-add-event bg-brand-500 hover:bg-brand-600 flex w-full justify-center rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-white sm:w-auto disabled:opacity-50 bg-gray-50 hover:border-gray-300 hover:bg-slate-200 dark:bg-slate-500 dark:hover:bg-white/3 cursor-pointer">
 								Add Event
 							</button>
 						</div>

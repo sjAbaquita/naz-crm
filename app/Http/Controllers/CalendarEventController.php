@@ -2,18 +2,29 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Calendar\CreateCalendarEvent;
+use App\Http\Requests\Calendar\StoreCalendarEventRequest;
+use App\Http\Requests\Calendar\UpdateCalendarEventRequest;
 use App\Models\CalendarEvent;
-use App\Http\Requests\StoreCalendarEventRequest;
-use App\Http\Requests\UpdateCalendarEventRequest;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class CalendarEventController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request): Response
     {
-        //
+        $user = $request->user();
+
+		// Current: only user events can be seen
+		// TODO: change to team view
+        return Inertia::render('calendar/Index', [
+            'events' => $user->calendarEvents,
+        ]);
     }
 
     /**
@@ -27,9 +38,13 @@ class CalendarEventController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreCalendarEventRequest $request)
+    public function store(StoreCalendarEventRequest $request, CreateCalendarEvent $createCalendarEvent): RedirectResponse
     {
-        //
+        $createCalendarEvent->handle($request->validated());
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Event created.')]);
+
+		return to_route('calendar.index');
     }
 
     /**
@@ -51,16 +66,24 @@ class CalendarEventController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateCalendarEventRequest $request, CalendarEvent $calendarEvent)
+    public function update(UpdateCalendarEventRequest $request, string $currentTeam, CalendarEvent $calendar): RedirectResponse
     {
-        //
+		$calendar->update($request->validated());
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Event updated.')]);
+
+        return to_route('calendar.index');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(CalendarEvent $calendarEvent)
+    public function destroy(string $currentTeam, CalendarEvent $calendar): RedirectResponse
     {
-        //
+		$calendar->delete();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Event deleted.')]);
+
+        return to_route('calendar.index');
     }
 }

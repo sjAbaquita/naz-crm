@@ -18,9 +18,15 @@ class BoardCardController extends Controller
             'column_id' => ['required', 'integer'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
         ]);
 
         $column = $this->column($currentTeam, $data['column_id']);
+
+        // Validate that assigned_to is a member of the current team
+        if (! empty($data['assigned_to']) && ! $this->isTeamMember($currentTeam, $data['assigned_to'])) {
+            return back()->withErrors(['assigned_to' => 'The selected user is not a member of this team.']);
+        }
 
         BoardCard::create([
             ...$data,
@@ -75,7 +81,13 @@ class BoardCardController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
         ]);
+
+        // Validate that assigned_to is a member of the current team
+        if (! empty($data['assigned_to']) && ! $this->isTeamMember($currentTeam, $data['assigned_to'])) {
+            return back()->withErrors(['assigned_to' => 'The selected user is not a member of this team.']);
+        }
 
         $card->update($data);
 
@@ -102,5 +114,10 @@ class BoardCardController extends Controller
             ->whereKey($id)
             ->whereHas('column', fn ($q) => $q->where('board_id', $team->board()->value('id')))
             ->firstOrFail();
+    }
+
+    private function isTeamMember(Team $team, int $userId): bool
+    {
+        return $team->members()->where('user_id', $userId)->exists();
     }
 }

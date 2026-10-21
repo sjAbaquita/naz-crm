@@ -3,12 +3,20 @@ export type BoardPermissions = {
     canEditCards: boolean;
 };
 
+export type UserMinimal = {
+    id: number;
+    name: string;
+    email: string;
+};
+
 export type BoardCard = {
     id: number;
     column_id: number;
     title: string;
     description: string | null;
     position: number;
+    assigned_to: number | null;
+    assignee?: UserMinimal | null;
 };
 
 export type Card = BoardCard;

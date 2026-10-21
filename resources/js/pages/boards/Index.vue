@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import { router, useForm } from '@inertiajs/vue3'
-import { Plus, Trash2, X } from 'lucide-vue-next';
+import { Plus, Trash2, X, User } from 'lucide-vue-next';
 import Sortable from 'sortablejs'
 import { ref, onMounted, nextTick, watch } from 'vue'
 
 import cardsRoutes from '@/routes/cards';
 import columnRoutes from '@/routes/column';
 import type { Team } from '@/types';
-import type { Board, BoardCard, BoardPermissions } from '@/types/boards';
+import type { Board, BoardCard, BoardPermissions, UserMinimal } from '@/types/boards';
 
 type Props = {
     board: Board;
     currentTeam: Team;
     permissions: BoardPermissions;
+    teamMembers: UserMinimal[];
 };
 
 const props = defineProps<Props>()
@@ -26,6 +27,7 @@ const cardForm = useForm({
     title: '',
     description: '',
     column_id: null as number | null,
+    assigned_to: null as number | null,
 })
 
 const columnForm = useForm({
@@ -63,8 +65,8 @@ const initDrag = async () => {
         const el = document.getElementById(`col-${column.id}`)
 
         if (!el) {
-return
-}
+            return
+        }
 
         new Sortable(el, {
             group: 'kanban',
@@ -141,6 +143,7 @@ const openCardModal = (card: BoardCard) => {
     cardForm.title = card.title
     cardForm.description = card.description || ''
     cardForm.column_id = card.column_id
+    cardForm.assigned_to = card.assigned_to || null
     showCardModal.value = true
 }
 
@@ -149,6 +152,7 @@ const openAddCardModal = (columnId: number) => {
     isAddingCard.value = true
     cardForm.reset()
     cardForm.column_id = columnId
+    cardForm.assigned_to = null
     showCardModal.value = true
 }
 
@@ -240,6 +244,10 @@ defineOptions({
                         <div v-if="card.description" class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
                             {{ card.description }}
                         </div>
+                        <div v-if="card.assignee" class="flex items-center gap-1 mt-2 pt-2 border-t border-gray-100 dark:border-gray-600">
+                            <User class="w-3 h-3 text-gray-400" />
+                            <span class="text-xs text-gray-500 dark:text-gray-400">{{ card.assignee.name }}</span>
+                        </div>
                     </div>
                 </div>
 
@@ -316,6 +324,24 @@ defineOptions({
                             placeholder="Add a more detailed description..."
                             class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow resize-none"
                         ></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assignee</label>
+                        <select
+                            v-model="cardForm.assigned_to"
+                            :readonly="!props.permissions.canEditCards && !isAddingCard"
+                            class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                        >
+                            <option value="">Unassigned</option>
+                            <option
+                                v-for="member in props.teamMembers"
+                                :key="member.id"
+                                :value="member.id"
+                            >
+                                {{ member.name }} ({{ member.email }})
+                            </option>
+                        </select>
                     </div>
                 </div>
 

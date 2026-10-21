@@ -23,6 +23,7 @@ class BoardCardFactory extends Factory
             'title' => $this->faker->sentence(3),
             'description' => $this->faker->optional()->paragraph(),
             'position' => 0,
+            'assigned_to' => null,
         ];
     }
 }

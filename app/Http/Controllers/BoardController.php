@@ -17,12 +17,19 @@ class BoardController extends Controller
         $board = $currentTeam->board()
             ->with([
                 'columns' => fn ($q) => $q->orderBy('position'),
-                'columns.cards' => fn ($q) => $q->orderBy('position'),
+                'columns.cards' => fn ($q) => $q->orderBy('position')->with('assignee:id,name,email'),
             ])
             ->firstOrFail();
 
+        // Get team members for assignment dropdown
+        $teamMembers = $currentTeam->members()
+            ->select('users.id', 'users.name', 'users.email')
+            ->get()
+            ->values();
+
         return Inertia::render('boards/Index', [
             'board' => $board,
+            'teamMembers' => $teamMembers,
             'permissions' => [
                 'canManageColumns' => $role?->isAtLeast(TeamRole::Admin) ?? false,
                 'canEditCards' => $role?->isAtLeast(TeamRole::Admin) ?? false,

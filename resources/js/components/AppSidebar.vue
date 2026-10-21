@@ -18,9 +18,9 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import board from '@/routes/board';
 import calendar from '@/routes/calendar';
 import type { NavItem } from '@/types';
-import board from '@/routes/board';
 
 const page = usePage();
 

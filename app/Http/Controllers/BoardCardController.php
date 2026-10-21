@@ -46,19 +46,41 @@ class BoardCardController extends Controller
 
         $card = $this->card($currentTeam, $id);
         $target = $this->column($currentTeam, $data['column_id']);
+        $newPosition = $data['position'];
 
-        DB::transaction(function () use ($card, $target, $data): void {
+        DB::transaction(function () use ($card, $target, $newPosition): void {
             $sourceColumnId = $card->column_id;
 
-            $card->update([
-                'column_id' => $target->id,
-                'position' => $data['position'],
-            ]);
-
-            foreach ($target->cards()->orderBy('position')->get()->values() as $index => $item) {
-                $item->update(['position' => $index]);
+            // If moving to a different column, first shift target column cards to make room
+            if ($sourceColumnId !== $target->id) {
+                $target->cards()
+                    ->where('position', '>=', $newPosition)
+                    ->increment('position');
+            } else {
+                // Moving within same column - handle direction
+                $oldPosition = $card->position;
+                if ($newPosition < $oldPosition) {
+                    // Moving up - shift cards between new and old position down
+                    $target->cards()
+                        ->where('position', '>=', $newPosition)
+                        ->where('position', '<', $oldPosition)
+                        ->increment('position');
+                } elseif ($newPosition > $oldPosition) {
+                    // Moving down - shift cards between old and new position up
+                    $target->cards()
+                        ->where('position', '>', $oldPosition)
+                        ->where('position', '<=', $newPosition)
+                        ->decrement('position');
+                }
             }
 
+            // Update the moved card
+            $card->update([
+                'column_id' => $target->id,
+                'position' => $newPosition,
+            ]);
+
+            // Re-index source column if different
             if ($sourceColumnId !== $target->id) {
                 $sourceColumn = BoardColumn::find($sourceColumnId);
                 if ($sourceColumn) {

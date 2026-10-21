@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\TeamRole;
+use App\Models\Board;
 use App\Models\Team;
 use App\Models\User;
 
@@ -29,6 +30,21 @@ test('teams can be created', function () {
         'name' => 'Test Team',
         'is_personal' => false,
     ]);
+});
+
+test('created teams receive exactly one shared board', function () {
+    $user = User::factory()->create();
+
+    $this
+        ->actingAs($user)
+        ->post(route('teams.store'), [
+            'name' => 'Operations',
+        ])
+        ->assertRedirect();
+
+    $team = Team::query()->where('name', 'Operations')->firstOrFail();
+
+    expect($team->board)->toBeInstanceOf(Board::class);
 });
 
 test('team slug uses next available suffix', function () {

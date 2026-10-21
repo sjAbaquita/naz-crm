@@ -30,7 +30,7 @@ class UpdateCalendarEventRequest extends FormRequest
             'location'     	=> ['nullable', 'string', 'max:255'],
             'event_level'   => [Rule::enum(EventLevel::class)],
             'start_date'    => ['required', 'date'],
-            'end_date'    	=> ['nullable', 'date'],
+            'end_date'    	=> ['nullable', 'date', 'after_or_equal:start_date'],
         ];
     }
 }

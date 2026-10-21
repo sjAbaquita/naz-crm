@@ -12,5 +12,6 @@ export type CalendarEvent = {
 		calendar: EventLevel,
 		description: string,
 		location: string,
-	}
+	},
+	creator?: { id: number, name: string };
 }

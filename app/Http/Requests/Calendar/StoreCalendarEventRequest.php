@@ -5,7 +5,6 @@ namespace App\Http\Requests\Calendar;
 use App\Enums\EventLevel;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 class StoreCalendarEventRequest extends FormRequest
@@ -26,20 +25,12 @@ class StoreCalendarEventRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'owner_id' 		=> ['required', 'exists:users,id'],
             'title' 		=> ['required', 'string', 'max:255'],
             'description'   => ['nullable', 'string'],
             'location'     	=> ['nullable', 'string', 'max:255'],
             'event_level'   => [Rule::enum(EventLevel::class)],
             'start_date'    => ['required', 'date'],
-            'end_date'    	=> ['nullable', 'date'],
+            'end_date'    	=> ['nullable', 'date', 'after_or_equal:start_date'],
         ];
-    }
-
-    protected function prepareForValidation()
-    {
-        $this->merge([
-            'owner_id' => Auth::id(),
-        ]);
     }
 }

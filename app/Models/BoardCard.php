@@ -7,6 +7,7 @@ use Database\Factories\BoardCardFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable(['column_id', 'title', 'description', 'position'])]
 class BoardCard extends Model
@@ -14,8 +15,8 @@ class BoardCard extends Model
 	/** @use HasFactory<BoardCardFactory> */
     use HasFactory;
 
-    public function columns()
+    public function column(): BelongsTo
     {
-        return $this->hasMany(BoardColumn::class, 'column_id')->orderBy('position');
+        return $this->belongsTo(BoardColumn::class);
     }
 }

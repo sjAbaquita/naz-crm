@@ -18,7 +18,7 @@ Route::prefix('{current_team}')
 		Route::delete('/columns/{id}', [BoardColumnController::class, 'destroy'])->name('column.destroy');
 
 		Route::post('/cards', [BoardCardController::class, 'store'])->name('cards.store');
-		Route::post('/cards/move', [BoardCardController::class, 'move'])->name('cards.move');
+		Route::patch('/cards/{id}/move', [BoardCardController::class, 'move'])->name('cards.move');
 		Route::put('/cards/{id}', [BoardCardController::class, 'update'])->name('cards.update');
 		Route::delete('/cards/{id}', [BoardCardController::class, 'destroy'])->name('cards.destroy');
     });

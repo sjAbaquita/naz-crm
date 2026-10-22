@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Team;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Carbon\Carbon;
 
 class DashboardController extends Controller
 {

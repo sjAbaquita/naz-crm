@@ -2,6 +2,7 @@
 
 namespace App\Actions\Board;
 
+use App\Actions\Activity\RecordActivity;
 use App\Models\BoardCard;
 use App\Models\BoardColumn;
 use Illuminate\Support\Facades\DB;
@@ -53,6 +54,16 @@ class MoveBoardCard
                         $item->update(['position' => $index]);
                     }
                 }
+            }
+
+            $teamId = $targetColumn->board?->team_id;
+            if ($teamId) {
+                app(RecordActivity::class)->handle(
+                    team: $teamId,
+                    action: 'moved_card',
+                    description: "moved card '{$card->title}' to '{$targetColumn->title}'",
+                    subject: $card,
+                );
             }
         });
     }

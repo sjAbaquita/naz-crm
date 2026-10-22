@@ -27,9 +27,17 @@ class BoardController extends Controller
             ->get()
             ->values();
 
+        // Get recent activities for the notification bell
+        $recentActivities = $currentTeam->activities()
+            ->with('user:id,name')
+            ->latest()
+            ->limit(10)
+            ->get();
+
         return Inertia::render('boards/Index', [
             'board' => $board,
             'teamMembers' => $teamMembers,
+            'recentActivities' => $recentActivities,
             'permissions' => [
                 'canManageColumns' => $role?->isAtLeast(TeamRole::Admin) ?? false,
                 'canEditCards' => $role?->isAtLeast(TeamRole::Admin) ?? false,

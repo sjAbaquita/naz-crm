@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { router, useForm } from '@inertiajs/vue3'
-import { Plus, Trash2, X, User } from 'lucide-vue-next';
+import { router, useForm, usePage } from '@inertiajs/vue3'
+import { Plus, Trash2, X, User, ChevronDown, ChevronRight } from 'lucide-vue-next';
 import Sortable from 'sortablejs'
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, onMounted, nextTick, watch, computed } from 'vue'
 
 import cardsRoutes from '@/routes/cards';
 import columnRoutes from '@/routes/column';
 import type { Team } from '@/types';
 import type { Board, BoardCard, BoardPermissions, UserMinimal } from '@/types/boards';
+import type { Activity } from '@/types/activity';
 
 type Props = {
     board: Board;
@@ -17,6 +18,7 @@ type Props = {
 };
 
 const props = defineProps<Props>()
+const page = usePage();
 
 // Modal State
 const showCardModal = ref(false)
@@ -33,6 +35,26 @@ const cardForm = useForm({
 const columnForm = useForm({
     title: '',
 })
+
+// Activity log for the selected card
+const cardActivityLog = ref<{ action: string; description: string; created_at: string; user?: { name: string } | null }[]>([])
+const showActivityLog = ref(false)
+
+const loadCardActivity = (card: BoardCard) => {
+    // Filter activities related to this card from recent activities (shared via Inertia middleware)
+    const recentActivities = page.props.recentActivities as Activity[];
+    const cardActivities = recentActivities.filter(a =>
+        (a.subject_type === 'App\\Models\\BoardCard' || a.subject_type === 'App\\\\Models\\\\BoardCard')
+        && a.subject_id === card.id
+    )
+    cardActivityLog.value = cardActivities.map(a => ({
+        action: a.action,
+        description: a.description,
+        created_at: a.created_at,
+        user: a.user || null,
+    }))
+    showActivityLog.value = cardActivities.length > 0
+}
 
 const initDrag = async () => {
     await nextTick()
@@ -144,6 +166,7 @@ const openCardModal = (card: BoardCard) => {
     cardForm.description = card.description || ''
     cardForm.column_id = card.column_id
     cardForm.assigned_to = card.assigned_to || null
+    loadCardActivity(card)
     showCardModal.value = true
 }
 
@@ -215,6 +238,9 @@ defineOptions({
 
 <template>
     <div class="flex flex-col p-4 h-[calc(100vh-80px)] overflow-hidden">
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Board</h1>
+        </div>
         <div id="board-columns" class="flex gap-4 overflow-x-auto overflow-y-hidden flex-1 pb-4">
             <div
                 v-for="col in props.board.columns"
@@ -343,6 +369,34 @@ defineOptions({
                             </option>
                         </select>
                     </div>
+
+                    <!-- Activity Log Accordion -->
+                    <div v-if="!isAddingCard && cardActivityLog.length > 0" class="border-t border-gray-100 dark:border-gray-800 pt-4 mt-4">
+                        <button
+                            @click="showActivityLog = !showActivityLog"
+                            class="flex items-center justify-between w-full text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                        >
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs uppercase tracking-wider text-gray-400">Activity Log</span>
+                                <span class="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-[10px] text-gray-500">{{ cardActivityLog.length }}</span>
+                            </div>
+                            <ChevronDown v-if="showActivityLog" class="w-4 h-4" />
+                            <ChevronRight v-else class="w-4 h-4" />
+                        </button>
+
+                        <div v-if="showActivityLog" class="mt-3 space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                            <div v-for="(log, idx) in cardActivityLog" :key="idx" class="flex gap-3 text-xs">
+                                <div class="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-gray-700 dark:text-gray-300 leading-normal">
+                                        <span class="font-bold">{{ log.user?.name || 'Someone' }}</span>
+                                        {{ log.description.replace(/card '.*'/, '').trim() }}
+                                    </p>
+                                    <p class="text-[10px] text-gray-400 mt-0.5">{{ new Date(log.created_at).toLocaleString() }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 flex items-center justify-between">
@@ -376,3 +430,20 @@ defineOptions({
         </div>
     </div>
 </template>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 20px;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+}
+</style>
+

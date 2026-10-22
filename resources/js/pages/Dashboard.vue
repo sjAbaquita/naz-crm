@@ -88,7 +88,12 @@ defineOptions({
                     <div class="flex-1">
                         <p class="font-medium text-gray-900 dark:text-white">{{ event.title }}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            {{ toDateOnly(event.start_date) }} - {{ toDateOnly(event.end_date) }}
+                            <span v-if="!event.end_date || toDateOnly(event.start_date) === toDateOnly(event.end_date)">
+                                {{ toDateOnly(event.start_date) }}
+                            </span>
+                            <span v-else>
+                                {{ toDateOnly(event.start_date) }} - {{ toDateOnly(event.end_date) }}
+                            </span>
                             <span v-if="event.creator"> (by {{ event.creator.name }})</span>
                         </p>
                     </div>

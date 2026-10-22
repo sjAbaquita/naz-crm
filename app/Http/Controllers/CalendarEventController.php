@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Calendar\CreateCalendarEvent;
+use App\Actions\Activity\RecordActivity;
 use App\Enums\TeamRole;
 use App\Http\Requests\Calendar\RescheduleCalendarEventRequest;
 use App\Http\Requests\Calendar\StoreCalendarEventRequest;
@@ -60,21 +61,16 @@ class CalendarEventController extends Controller
 		return to_route('calendar.index', $currentTeam);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(CalendarEvent $calendarEvent)
-    {
-        //
-    }
+    // The following methods are retained for RESTful completeness but are not used in the current UI.
+    // public function show(CalendarEvent $calendarEvent)
+    // {
+    //     // No implementation needed.
+    // }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(CalendarEvent $calendarEvent)
-    {
-        //
-    }
+    // public function edit(CalendarEvent $calendarEvent)
+    // {
+    //     // No implementation needed.
+    // }
 
     /**
      * Update the specified resource in storage.
@@ -84,7 +80,14 @@ class CalendarEventController extends Controller
         $this->ensureTeamEvent($currentTeam, $calendar);
         Gate::authorize('update', $calendar);
 
-		$calendar->update($request->validated());
+        $calendar->update($request->validated());
+
+        app(RecordActivity::class)->handle(
+            team: $currentTeam->id,
+            action: 'updated_event',
+            description: "updated event '{$calendar->title}'",
+            subject: $calendar,
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Event updated.')]);
 

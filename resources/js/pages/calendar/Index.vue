@@ -106,13 +106,21 @@ return
 // Reschedule Event
 const reschedule = (info: any) => {
     const event = info.event;
+    let endDate = event.endStr;
+    if (endDate && event.allDay) {
+        const d = new Date(endDate);
+        d.setDate(d.getDate() - 1);
+        endDate = toDateOnly(d.toISOString());
+    } else {
+        endDate = endDate ? toDateOnly(endDate) : null;
+    }
 
     router.patch(rescheduleRoute({
         current_team: props.currentTeam.slug,
         calendar: Number(event.id)
     }).url, {
         start_date: toDateOnly(event.startStr),
-        end_date: event.endStr ? toDateOnly(event.endStr) : null,
+        end_date: endDate,
     }, {
         preserveScroll: true,
         onError: () => info.revert(),
@@ -156,31 +164,43 @@ const calendarEvents = computed(() => {
         return !start.includes('T') && !(end && end.includes('T'))
     };
 
-    return events.value.map(event => ({
-        id: String(event.id),
-        title: event.title,
-        start: event.start_date,
-        end: event.end_date,
-        allDay: isAllDayEvent(
-            event.start_date,
-            event.end_date
-        ),
-        extendedProps: {
-            calendar: event.event_level,
-            description: event.description,
-            location: event.location,
-        },
-    }))
+    return events.value.map(event => {
+        let endDate: string | undefined = undefined;
+        if (event.end_date) {
+            const d = new Date(event.end_date);
+            d.setDate(d.getDate() + 1);
+            endDate = d.toISOString().split('T')[0];
+        }
+
+        return {
+            id: String(event.id),
+            title: event.title,
+            start: event.start_date,
+            end: endDate,
+            allDay: isAllDayEvent(
+                event.start_date,
+                event.end_date
+            ),
+            extendedProps: {
+                calendar: event.event_level,
+                description: event.description,
+                location: event.location,
+            },
+        }
+    })
 })
 
 const toDateOnly = (date?: string | null) => {
     if (!date) {
-return '';
-}
+        return '';
+    }
 
     const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
 
-    return d.toISOString().split('T')[0];
+    return `${year}-${month}-${day}`;
 }
 
 const mapEventToForm = (id: number | string) => {
@@ -275,7 +295,11 @@ const calendarOptions = computed(() => ({
 
 const openForm = () => {
     resetForm()
-    form.value.start_date = new Date().toISOString().split('T')[0]
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    form.value.start_date = `${year}-${month}-${day}`
     openModal()
 }
 

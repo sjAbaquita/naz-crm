@@ -1,4 +1,11 @@
 <script setup lang="ts">
+import { usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import ActivityBell from '@/components/ActivityBell.vue';
+import type { Activity } from '@/types/activity';
+const page = usePage();
+const currentTeam = computed(() => page.props.currentTeam);
+const recentActivities = computed(() => page.props.recentActivities as Activity[] || []);
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { BreadcrumbItem } from '@/types';
@@ -23,5 +30,9 @@ withDefaults(
                 <Breadcrumbs :breadcrumbs="breadcrumbs" />
             </template>
         </div>
+    <ActivityBell
+        :activities="recentActivities"
+        :currentTeam="currentTeam"
+    />
     </header>
 </template>

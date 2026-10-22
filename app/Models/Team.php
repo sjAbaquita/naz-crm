@@ -103,6 +103,16 @@ class Team extends Model
     }
 
     /**
+     * Get the team's recorded activities.
+     *
+     * @return HasMany<Activity, $this>
+     */
+    public function activities(): HasMany
+    {
+        return $this->hasMany(Activity::class);
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

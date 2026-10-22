@@ -10,10 +10,13 @@ Route::inertia('/', 'Welcome', [
     'canRegister' => Features::enabled(Features::registration()),
 ])->name('home');
 
+use App\Http\Controllers\ActivityFeedController;
+
 Route::prefix('{current_team}')
     ->middleware(['auth', 'verified', EnsureTeamMembership::class])
     ->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
+        Route::get('activity', [ActivityFeedController::class, 'index'])->name('activity.feed');
     });
 
 Route::middleware(['auth'])->group(function () {

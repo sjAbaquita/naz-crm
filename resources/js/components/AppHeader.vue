@@ -2,6 +2,7 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-vue-next';
 import { computed } from 'vue';
+import ActivityBell from '@/components/ActivityBell.vue';
 import AppLogo from '@/components/AppLogo.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
@@ -38,6 +39,7 @@ import { getInitials } from '@/composables/useInitials';
 import { toUrl } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, NavItem } from '@/types';
+import type { Activity } from '@/types/activity';
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
@@ -49,7 +51,11 @@ const props = withDefaults(defineProps<Props>(), {
 
 const page = usePage();
 const auth = computed(() => page.props.auth);
+const currentTeam = computed(() => page.props.currentTeam);
+const recentActivities = computed(() => (page.props.recentActivities as Activity[]) || []);
 const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
+
+console.log(recentActivities.value);
 
 const dashboardUrl = computed(() =>
     page.props.currentTeam ? dashboard(page.props.currentTeam.slug).url : '/',
@@ -242,6 +248,11 @@ const rightNavItems: NavItem[] = [
                             </template>
                         </div>
                     </div>
+
+                    <ActivityBell
+                        :activities="recentActivities"
+                        :currentTeam="currentTeam"
+                    />
 
                     <DropdownMenu>
                         <DropdownMenuTrigger :as-child="true">

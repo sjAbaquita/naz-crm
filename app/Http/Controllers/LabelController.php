@@ -2,15 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\CreateLabel;
-use App\Actions\DeleteLabel;
-use App\Actions\UpdateLabel;
-use App\Http\Requests\StoreLabelRequest;
-use App\Http\Requests\UpdateLabelRequest;
 use App\Models\Label;
 use App\Models\Team;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -28,23 +23,33 @@ class LabelController extends Controller
         ]);
     }
 
-    public function store(StoreLabelRequest $request, Team $currentTeam, CreateLabel $createLabel)
+    public function store(Request $request, Team $currentTeam): RedirectResponse
     {
-        $createLabel->handle($currentTeam, $request->validated());
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'color' => ['required', 'string', 'max:7'],
+        ]);
+
+        $currentTeam->labels()->create($validated);
 
         return to_route('labels.index', $currentTeam);
     }
 
-    public function update(UpdateLabelRequest $request, Team $currentTeam, Label $label, UpdateLabel $updateLabel)
+    public function update(Request $request, Team $currentTeam, Label $label): RedirectResponse
     {
-        $updateLabel->handle($label, $request->validated());
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'color' => ['required', 'string', 'max:7'],
+        ]);
+
+        $label->update($validated);
 
         return to_route('labels.index', $currentTeam);
     }
 
-    public function destroy(Team $currentTeam, Label $label, DeleteLabel $deleteLabel)
+    public function destroy(Team $currentTeam, Label $label): RedirectResponse
     {
-        $deleteLabel->handle($label);
+        $label->delete();
 
         return to_route('labels.index', $currentTeam);
     }

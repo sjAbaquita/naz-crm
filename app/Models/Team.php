@@ -113,6 +113,16 @@ class Team extends Model
     }
 
     /**
+     * Get the team's labels.
+     *
+     * @return HasMany<Label, $this>
+     */
+    public function labels(): HasMany
+    {
+        return $this->hasMany(Label::class);
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

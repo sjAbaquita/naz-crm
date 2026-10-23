@@ -17,6 +17,7 @@ export type BoardCard = {
     position: number;
     assigned_to: number | null;
     assignee?: UserMinimal | null;
+    labels?: { id: number; name: string; color: string }[];
 };
 
 export type Card = BoardCard;

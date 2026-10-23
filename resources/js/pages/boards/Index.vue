@@ -274,6 +274,10 @@ defineOptions({
                             <User class="w-3 h-3 text-gray-400" />
                             <span class="text-xs text-gray-500 dark:text-gray-400">{{ card.assignee.name }}</span>
                         </div>
+                        <div v-if="card.labels && card.labels.length > 0" class="flex items-center gap-1 mt-2 pt-2 border-t border-gray-100 dark:border-gray-600">
+                            <span v-for="label in card.labels" :key="label.id" class="w-2 h-2 rounded-full inline-block" :style="{ background: label.color }" />
+                            <span v-for="label in card.labels" :key="`label-${label.id}`" class="text-xs font-medium text-gray-500 dark:text-gray-400 ml-1">{{ label.name }}</span>
+                        </div>
                     </div>
                 </div>
 

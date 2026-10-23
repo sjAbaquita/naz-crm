@@ -10,10 +10,6 @@ const props = defineProps<{
     currentTeam: Team | null;
 }>();
 
-// Debug log to verify props are received
-// eslint-disable-next-line no-console
-console.log('ActivityBell props:', props);
-
 const isOpen = ref(false);
 
 const page = usePage();

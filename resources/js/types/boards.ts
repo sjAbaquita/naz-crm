@@ -1,3 +1,9 @@
+export type Label = {
+    id: number;
+    name: string;
+    color: string;
+};
+
 export type BoardPermissions = {
     canManageColumns: boolean;
     canEditCards: boolean;

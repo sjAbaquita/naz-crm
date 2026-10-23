@@ -11,16 +11,17 @@ use Inertia\Response as InertiaResponse;
 
 class LabelController extends Controller
 {
-    public function index(Request $request, Team $currentTeam): InertiaResponse
+    public function index(Request $request, Team $currentTeam): InertiaResponse | RedirectResponse
     {
         $labels = $currentTeam->labels()
             ->withCount('cards')
             ->latest()
             ->get();
 
-        return Inertia::render('labels/Index', [
-            'labels' => $labels,
-        ]);
+        // return Inertia::render('labels/Index', [
+        //     'labels' => $labels,
+        // ]);
+        return to_route('board.index');
     }
 
     public function store(Request $request, Team $currentTeam): RedirectResponse

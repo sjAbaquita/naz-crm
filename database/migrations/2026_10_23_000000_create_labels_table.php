@@ -12,7 +12,7 @@ return new class extends Migration
     {
         Schema::create('labels', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('team_id')->nullable()->constrained('teams')->onDelete('cascade');
+            $table->foreignId('team_id')->constrained('teams')->onDelete('cascade');
             $table->string('name');
             $table->string('color')->default('#3b82f6');
             $table->timestamps();

@@ -7,7 +7,7 @@ import { ref, onMounted, nextTick, watch, computed } from 'vue'
 import cardsRoutes from '@/routes/cards';
 import columnRoutes from '@/routes/column';
 import type { Team } from '@/types';
-import type { Board, BoardCard, BoardPermissions, UserMinimal } from '@/types/boards';
+import type { Board, BoardCard, BoardPermissions, UserMinimal, Label } from '@/types/boards';
 import type { Activity } from '@/types/activity';
 
 type Props = {
@@ -15,6 +15,7 @@ type Props = {
     currentTeam: Team;
     permissions: BoardPermissions;
     teamMembers: UserMinimal[];
+    labels: Label[];
 };
 
 const props = defineProps<Props>()
@@ -30,6 +31,7 @@ const cardForm = useForm({
     description: '',
     column_id: null as number | null,
     assigned_to: null as number | null,
+    labels: [] as number[],
 })
 
 const columnForm = useForm({
@@ -39,6 +41,7 @@ const columnForm = useForm({
 // Activity log for the selected card
 const cardActivityLog = ref<{ action: string; description: string; created_at: string; user?: { name: string } | null }[]>([])
 const showActivityLog = ref(false)
+const newLabelName = ref('')
 
 const loadCardActivity = (card: BoardCard) => {
     // Filter activities related to this card from recent activities (shared via Inertia middleware)
@@ -166,6 +169,7 @@ const openCardModal = (card: BoardCard) => {
     cardForm.description = card.description || ''
     cardForm.column_id = card.column_id
     cardForm.assigned_to = card.assigned_to || null
+    cardForm.labels = card.labels?.map(l => l.id) || []
     loadCardActivity(card)
     showCardModal.value = true
 }
@@ -177,6 +181,22 @@ const openAddCardModal = (columnId: number) => {
     cardForm.column_id = columnId
     cardForm.assigned_to = null
     showCardModal.value = true
+}
+
+const createLabel = () => {
+    if (!newLabelName.value.trim()) {
+        return
+    }
+    router.post(`/${props.currentTeam.slug}/labels`, {
+        name: newLabelName.value,
+        color: '#3b82f6',
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            newLabelName.value = ''
+            router.reload({ only: ['board', 'labels'] })
+        }
+    })
 }
 
 const saveCard = () => {
@@ -373,6 +393,34 @@ defineOptions({
                             </option>
                         </select>
                     </div>
+
+					<div v-if="1 !== 1">
+						<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Labels</label>
+						<select
+							v-model="cardForm.labels"
+							multiple
+							class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+						>
+							<option
+								v-for="label in ($page.props.labels as Label[])"
+								:key="label.id"
+								:value="label.id"
+							>
+								{{ label.name }}
+							</option>
+						</select>
+					<div class="flex items-center mt-2 space-x-2">
+						<input
+							v-model="newLabelName"
+							placeholder="New label name"
+							class="flex-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded"
+						/>
+						<button
+							@click="createLabel"
+							class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+						> Add </button>
+					</div>
+					</div>
 
                     <!-- Activity Log Accordion -->
                     <div v-if="!isAddingCard && cardActivityLog.length > 0" class="border-t border-gray-100 dark:border-gray-800 pt-4 mt-4">

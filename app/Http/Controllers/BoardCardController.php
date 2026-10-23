@@ -24,7 +24,12 @@ class BoardCardController extends Controller
         Gate::authorize('create', [BoardCard::class, $currentTeam]);
 
         $column = $this->column($currentTeam, $request->validated('column_id'));
-        $createBoardCard->handle($column->id, $request->validated());
+        $card = $createBoardCard->handle($column->id, $request->validated());
+
+        // sync labels if provided
+        if ($request->filled('labels')) {
+            $card->labels()->sync($request->input('labels'));
+        }
 
         return to_route('board.index', $currentTeam);
     }
@@ -53,6 +58,11 @@ class BoardCardController extends Controller
 
         $updateBoardCard = app(UpdateBoardCard::class);
         $updateBoardCard->handle($card, $request->validated());
+
+        // sync labels if provided
+        if ($request->filled('labels')) {
+            $card->labels()->sync($request->input('labels'));
+        }
 
         return to_route('board.index', $currentTeam);
     }

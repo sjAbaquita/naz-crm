@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\TeamRole;
 use App\Models\Team;
+use App\Models\Label;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -21,6 +22,12 @@ class BoardController extends Controller
             ])
             ->firstOrFail();
 
+        // Load all labels for this team
+        $labels = $currentTeam->labels()
+            ->select('id', 'name', 'color')
+            ->orderBy('name')
+            ->get();
+
         // Get team members for assignment dropdown
         $teamMembers = $currentTeam->members()
             ->select('users.id', 'users.name', 'users.email')
@@ -34,6 +41,7 @@ class BoardController extends Controller
             ->limit(10)
             ->get();
 
+
         return Inertia::render('boards/Index', [
             'board' => $board,
             'teamMembers' => $teamMembers,
@@ -42,6 +50,7 @@ class BoardController extends Controller
                 'canManageColumns' => $role?->isAtLeast(TeamRole::Admin) ?? false,
                 'canEditCards' => $role?->isAtLeast(TeamRole::Admin) ?? false,
             ],
+            'labels' => $labels,
         ]);
     }
 }

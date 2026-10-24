@@ -11,7 +11,10 @@ class UpdateSubtaskRequest extends FormRequest
     {
         // Only allow if user is the creator of the subtask
         $subtask = $this->route('subtask');
-        return $this->user()->id === $subtask->created_by;
+        if (is_numeric($subtask)) {
+            $subtask = Subtask::find($subtask);
+        }
+        return $subtask && $this->user()->id === $subtask->created_by;
     }
 
     public function rules(): array

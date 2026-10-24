@@ -10,7 +10,11 @@ class StoreSubtaskRequest extends FormRequest
     public function authorize(): bool
     {
         // Only allow if user is creator or assignee of the card
-        $card = $this->route('card');
+        $cardId = $this->route('card');
+        $card = \App\Models\BoardCard::find($cardId);
+        if (! $card) {
+            return false;
+        }
         $user = $this->user();
         return $user->id === $card->created_by || $user->id === $card->assigned_to;
     }

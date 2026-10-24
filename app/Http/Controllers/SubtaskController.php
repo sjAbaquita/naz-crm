@@ -15,8 +15,18 @@ use Illuminate\Http\JsonResponse;
 
 class SubtaskController extends Controller
 {
-    public function index(Request $request, Team $currentTeam, BoardCard $card): JsonResponse
+    private function getCard(Team $team, int $cardId): BoardCard
     {
+        return BoardCard::query()
+            ->whereKey($cardId)
+            ->whereHas('column', fn ($q) => $q->where('board_id', $team->board()->value('id')))
+            ->firstOrFail();
+    }
+
+    public function index(Request $request, Team $currentTeam, int $card): JsonResponse
+    {
+        $card = $this->getCard($currentTeam, $card);
+
         $subtasks = $card->subtasks()
             ->with('creator:id,name', 'updater:id,name')
             ->get();
@@ -24,21 +34,25 @@ class SubtaskController extends Controller
         return response()->json(['subtasks' => $subtasks]);
     }
 
-    public function store(StoreSubtaskRequest $request, Team $currentTeam, BoardCard $card, CreateSubtask $createSubtask): JsonResponse
+    public function store(StoreSubtaskRequest $request, Team $currentTeam, int $card, CreateSubtask $createSubtask): JsonResponse
     {
+        $card = $this->getCard($currentTeam, $card);
+
         $subtask = $createSubtask->handle($card, $request->validated(), $request->user()->id);
 
         return response()->json(['subtask' => $subtask->load('creator:id,name')], 201);
     }
 
-    public function update(UpdateSubtaskRequest $request, Team $currentTeam, BoardCard $card, Subtask $subtask, UpdateSubtask $updateSubtask): JsonResponse
+    public function update(UpdateSubtaskRequest $request, Team $currentTeam, int $card, Subtask $subtask, UpdateSubtask $updateSubtask): JsonResponse
     {
+        $card = $this->getCard($currentTeam, $card);
+
         $subtask = $updateSubtask->handle($subtask, $request->validated(), $request->user()->id);
 
         return response()->json(['subtask' => $subtask->load('creator:id,name', 'updater:id,name')]);
     }
 
-    public function destroy(Request $request, Team $currentTeam, BoardCard $card, Subtask $subtask, DeleteSubtask $deleteSubtask): JsonResponse
+    public function destroy(Request $request, Team $currentTeam, int $card, Subtask $subtask, DeleteSubtask $deleteSubtask): JsonResponse
     {
         if ($request->user()->id !== $subtask->created_by) {
             abort(403);

@@ -1,0 +1,26 @@
+<?php
+
+namespace Database\Migrations;
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('labels', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('team_id')->constrained('teams')->onDelete('cascade');
+            $table->string('name');
+            $table->string('color')->default('#3b82f6');
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('labels');
+    }
+};

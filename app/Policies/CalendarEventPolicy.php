@@ -2,9 +2,9 @@
 
 namespace App\Policies;
 
+use App\Enums\TeamRole;
 use App\Models\CalendarEvent;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class CalendarEventPolicy
 {
@@ -13,7 +13,7 @@ class CalendarEventPolicy
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -21,7 +21,7 @@ class CalendarEventPolicy
      */
     public function view(User $user, CalendarEvent $calendarEvent): bool
     {
-        return false;
+        return $calendarEvent->team !== null && $user->belongsToTeam($calendarEvent->team);
     }
 
     /**
@@ -29,7 +29,7 @@ class CalendarEventPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -37,7 +37,7 @@ class CalendarEventPolicy
      */
     public function update(User $user, CalendarEvent $calendarEvent): bool
     {
-        return false;
+        return $this->canManage($user, $calendarEvent);
     }
 
     /**
@@ -45,7 +45,15 @@ class CalendarEventPolicy
      */
     public function delete(User $user, CalendarEvent $calendarEvent): bool
     {
-        return false;
+        return $this->canManage($user, $calendarEvent);
+    }
+
+    /**
+     * Determine whether the user can reschedule the model.
+     */
+    public function reschedule(User $user, CalendarEvent $calendarEvent): bool
+    {
+        return $calendarEvent->team !== null && $user->belongsToTeam($calendarEvent->team);
     }
 
     /**
@@ -62,5 +70,11 @@ class CalendarEventPolicy
     public function forceDelete(User $user, CalendarEvent $calendarEvent): bool
     {
         return false;
+    }
+
+    protected function canManage(User $user, CalendarEvent $calendarEvent): bool
+    {
+        return $calendarEvent->team !== null
+            && ($user->teamRole($calendarEvent->team)?->isAtLeast(TeamRole::Admin) ?? false);
     }
 }

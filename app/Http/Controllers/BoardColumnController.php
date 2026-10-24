@@ -2,38 +2,81 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Board\CreateBoardColumn;
+use App\Actions\Board\ReorderBoardColumns;
+use App\Actions\Board\UpdateBoardColumn;
+use App\Http\Requests\Board\ReorderBoardColumnsRequest;
+use App\Http\Requests\Board\StoreBoardColumnRequest;
+use App\Http\Requests\Board\UpdateBoardColumnRequest;
 use App\Models\BoardColumn;
-use Illuminate\Http\Request;
+use App\Models\Team;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
+use Inertia\Inertia;
 
 class BoardColumnController extends Controller
 {
-    public function store(Request $request)
+    /**
+     * Store a newly created board column.
+     */
+    public function store(StoreBoardColumnRequest $request, Team $currentTeam, CreateBoardColumn $createBoardColumn): RedirectResponse
     {
-        $column = BoardColumn::create([
-            'board_id' => $request->board_id,
-            'title' => $request->title,
-            'position' => BoardColumn::where('board_id', $request->board_id)->max('position') + 1,
-        ]);
+        Gate::authorize('create', [BoardColumn::class, $currentTeam]);
 
-        return response()->json($column);
+        $board = $currentTeam->board()->firstOrFail();
+        $createBoardColumn->handle($board->id, $request->validated());
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Column created.')]);
+
+        return to_route('board.index', $currentTeam);
     }
 
-    // reorder columns (drag left/right)
-    public function reorder(Request $request)
+    /**
+     * Update the specified board column.
+     */
+    public function update(UpdateBoardColumnRequest $request, Team $currentTeam, int $id): RedirectResponse
     {
-        foreach ($request->columns as $index => $columnId) {
-            BoardColumn::where('id', $columnId)->update([
-                'position' => $index
-            ]);
-        }
+        $column = $this->column($currentTeam, $id);
+        Gate::authorize('update', $column);
 
-        return response()->json(['success' => true]);
+        $updateBoardColumn = app(UpdateBoardColumn::class);
+        $updateBoardColumn->handle($column, $request->validated());
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Column updated.')]);
+
+        return to_route('board.index', $currentTeam);
     }
 
-    public function destroy($id)
+    /**
+     * Reorder board columns.
+     */
+    public function reorder(ReorderBoardColumnsRequest $request, Team $currentTeam, ReorderBoardColumns $reorderBoardColumns): RedirectResponse
     {
-        BoardColumn::findOrFail($id)->delete();
+        Gate::authorize('reorder', [BoardColumn::class, $currentTeam]);
 
-        return response()->json(['success' => true]);
+        $board = $currentTeam->board()->firstOrFail();
+        $reorderBoardColumns->handle($board, $request->validated('columns'));
+
+        return to_route('board.index', $currentTeam);
+    }
+
+    /**
+     * Remove the specified board column.
+     */
+    public function destroy(Team $currentTeam, int $id): RedirectResponse
+    {
+        $column = $this->column($currentTeam, $id);
+        Gate::authorize('delete', $column);
+
+        $column->delete();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Column deleted.')]);
+
+        return to_route('board.index', $currentTeam);
+    }
+
+    private function column(Team $team, int $id): BoardColumn
+    {
+        return $team->board()->firstOrFail()->columns()->findOrFail($id);
     }
 }

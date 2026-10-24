@@ -1,17 +1,45 @@
-export type Card = { 
-	id: number; 
-	column_id: number,
-	title: string,
-	description: string,
-	position: number,
-}
-export type Column = { 
-	id: number; 
-	title: string; 
-	cards: Card[] ;
-}
+export type Label = {
+    id: number;
+    name: string;
+    color: string;
+};
+
+export type BoardPermissions = {
+    canManageColumns: boolean;
+    canEditCards: boolean;
+};
+
+export type UserMinimal = {
+    id: number;
+    name: string;
+    email: string;
+};
+
+export type BoardCard = {
+    id: number;
+    column_id: number;
+    title: string;
+    description: string | null;
+    position: number;
+    assigned_to: number | null;
+    assignee?: UserMinimal | null;
+    labels?: { id: number; name: string; color: string }[];
+};
+
+export type Card = BoardCard;
+
+export type BoardColumn = {
+    id: number;
+    board_id?: number;
+    title: string;
+    position?: number;
+    cards: BoardCard[];
+};
+
+export type Column = BoardColumn;
+
 export type Board = {
-	id: number;
-	name: string;
-	columns: Column[];
-}
+    id: number;
+    name: string;
+    columns: BoardColumn[];
+};

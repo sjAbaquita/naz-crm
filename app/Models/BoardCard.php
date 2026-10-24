@@ -2,20 +2,39 @@
 
 namespace App\Models;
 
-use App\Models\BoardColumn;
 use Database\Factories\BoardCardFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['column_id', 'title', 'description', 'position'])]
+#[Fillable(['column_id', 'title', 'description', 'position', 'assigned_to'])]
 class BoardCard extends Model
-{	
-	/** @use HasFactory<BoardCardFactory> */
+{
+    /** @use HasFactory<BoardCardFactory> */
     use HasFactory;
 
-    public function columns()
+    public function column(): BelongsTo
     {
-        return $this->hasMany(BoardColumn::class, 'column_id')->orderBy('position');
+        return $this->belongsTo(BoardColumn::class);
+    }
+
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function labels(): BelongsToMany
+    {
+        return $this->belongsToMany(Label::class, 'label_board_card');
+    }
+
+    /**
+     * Get the team that owns the card.
+     */
+    public function getTeamAttribute(): ?Team
+    {
+        return $this->column?->board?->team;
     }
 }

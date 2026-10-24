@@ -2,95 +2,94 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Board\CreateBoardCard;
+use App\Actions\Board\MoveBoardCard;
+use App\Actions\Board\UpdateBoardCard;
+use App\Http\Requests\Board\MoveBoardCardRequest;
+use App\Http\Requests\Board\StoreBoardCardRequest;
+use App\Http\Requests\Board\UpdateBoardCardRequest;
 use App\Models\BoardCard;
-use Illuminate\Http\Request;
+use App\Models\BoardColumn;
+use App\Models\Team;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 
 class BoardCardController extends Controller
 {
-    public function store(Request $request)
+    /**
+     * Store a newly created board card.
+     */
+    public function store(StoreBoardCardRequest $request, Team $currentTeam, CreateBoardCard $createBoardCard): RedirectResponse
     {
-        $card = BoardCard::create([
-            'column_id' => $request->column_id,
-            'title' => $request->title,
-            'description' => $request->description,
-            'position' => BoardCard::where('column_id', $request->column_id)->max('position') + 1,
-        ]);
+        Gate::authorize('create', [BoardCard::class, $currentTeam]);
 
-        return response()->json($card);
-    }
+        $column = $this->column($currentTeam, $request->validated('column_id'));
+        $card = $createBoardCard->handle($column->id, $request->validated());
 
-    // MOVE + REORDER (drag & drop core)
-    public function move(Request $request)
-    {
-        $request->validate([
-            'card_id' => 'required|exists:cards,id',
-            'column_id' => 'required|exists:columns,id',
-            'position' => 'required|integer',
-        ]);
-
-        $card = BoardCard::findOrFail($request->card_id);
-
-        $oldColumn = $card->column_id;
-        $newColumn = $request->column_id;
-
-        // If moving within same column → reorder only
-        if ($oldColumn == $newColumn) {
-
-            $cards = BoardCard::where('column_id', $newColumn)
-                ->orderBy('position')
-                ->get()
-                ->values();
-
-            $cards->splice($request->position, 0, [$card]);
-
-            foreach ($cards as $index => $c) {
-                $c->update(['position' => $index]);
-            }
-
-        } else {
-            // Moving between columns
-
-            // reorder old column
-            BoardCard::where('column_id', $oldColumn)
-                ->where('id', '!=', $card->id)
-                ->orderBy('position')
-                ->get()
-                ->values()
-                ->each(fn ($c, $i) => $c->update(['position' => $i]));
-
-            // move card
-            $card->update([
-                'column_id' => $newColumn,
-                'position' => $request->position
-            ]);
-
-            // fix new column order
-            BoardCard::where('column_id', $newColumn)
-                ->orderBy('position')
-                ->get()
-                ->values()
-                ->each(fn ($c, $i) => $c->update(['position' => $i]));
+        // sync labels if provided
+        if ($request->filled('labels')) {
+            $card->labels()->sync($request->input('labels'));
         }
 
-        return response()->json(['success' => true]);
+        return to_route('board.index', $currentTeam);
     }
 
-    public function update(Request $request, $id)
+    /**
+     * Move a board card.
+     */
+    public function move(MoveBoardCardRequest $request, Team $currentTeam, int $id, MoveBoardCard $moveBoardCard): RedirectResponse
     {
-        $card = BoardCard::findOrFail($id);
+        $card = $this->card($currentTeam, $id);
+        Gate::authorize('move', $card);
 
-        $card->update($request->only([
-            'title',
-            'description'
-        ]));
+        $target = $this->column($currentTeam, $request->validated('column_id'));
+        $moveBoardCard->handle($card, $target, $request->validated('position'));
 
-        return response()->json($card);
+        return to_route('board.index', $currentTeam);
     }
 
-    public function destroy($id)
+    /**
+     * Update the specified board card.
+     */
+    public function update(UpdateBoardCardRequest $request, Team $currentTeam, int $id): RedirectResponse
     {
-        BoardCard::findOrFail($id)->delete();
+        $card = $this->card($currentTeam, $id);
+        Gate::authorize('update', $card);
 
-        return response()->json(['success' => true]);
+        $updateBoardCard = app(UpdateBoardCard::class);
+        $updateBoardCard->handle($card, $request->validated());
+
+        // sync labels if provided
+        if ($request->filled('labels')) {
+            $card->labels()->sync($request->input('labels'));
+        }
+
+        return to_route('board.index', $currentTeam);
+    }
+
+    /**
+     * Remove the specified board card.
+     */
+    public function destroy(Team $currentTeam, int $id): RedirectResponse
+    {
+        $card = $this->card($currentTeam, $id);
+        Gate::authorize('delete', $card);
+
+        $card->delete();
+
+        return to_route('board.index', $currentTeam);
+    }
+
+    private function column(Team $team, int $id): BoardColumn
+    {
+        return $team->board()->firstOrFail()->columns()->findOrFail($id);
+    }
+
+    private function card(Team $team, int $id): BoardCard
+    {
+        return BoardCard::query()
+            ->whereKey($id)
+            ->whereHas('column', fn ($q) => $q->where('board_id', $team->board()->value('id')))
+            ->firstOrFail();
     }
 }

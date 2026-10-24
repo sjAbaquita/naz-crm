@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { router, useForm, usePage } from '@inertiajs/vue3'
 import { Plus, Trash2, X, User, ChevronDown, ChevronRight } from 'lucide-vue-next';
+import { Link } from '@inertiajs/vue3';
+import SubtaskList from '@/components/SubtaskList.vue';
 import Sortable from 'sortablejs'
 import { ref, onMounted, nextTick, watch, computed } from 'vue'
 
@@ -298,6 +300,19 @@ defineOptions({
                             <span v-for="label in card.labels" :key="label.id" class="w-2 h-2 rounded-full inline-block" :style="{ background: label.color }" />
                             <span v-for="label in card.labels" :key="`label-${label.id}`" class="text-xs font-medium text-gray-500 dark:text-gray-400 ml-1">{{ label.name }}</span>
                         </div>
+
+                        <div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-600">
+                            <div v-if="card.subtasks && card.subtasks.length > 0" class="text-[10px] text-gray-500">
+                                {{ card.subtasks.filter(s => s.is_completed).length }}/{{ card.subtasks.length }} subtasks
+                            </div>
+                            <Link
+                                :href="`/${props.currentTeam.slug}/cards/${card.id}`"
+                                class="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                @click.stop
+                            >
+                                Details
+                            </Link>
+                        </div>
                     </div>
                 </div>
 
@@ -423,6 +438,16 @@ defineOptions({
 					</div>
 
                     <!-- Activity Log Accordion -->
+                        <div v-if="!isAddingCard && editingCard" class="border-t border-gray-100 dark:border-gray-800 pt-4 mt-4">
+                            <SubtaskList
+                                :cardId="editingCard.id"
+                                :subtasks="editingCard.subtasks || []"
+                                :canCreate="true"
+                                :canEdit="(subtask) => subtask.created_by === ($page.props.auth as any).user.id"
+                                :teamSlug="props.currentTeam.slug"
+                            />
+                        </div>
+
                     <div v-if="!isAddingCard && cardActivityLog.length > 0" class="border-t border-gray-100 dark:border-gray-800 pt-4 mt-4">
                         <button
                             @click="showActivityLog = !showActivityLog"

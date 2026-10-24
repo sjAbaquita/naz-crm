@@ -55,7 +55,7 @@ const canEditSubtask = (subtask: any) => {
 };
 
 const goBack = () => {
-    router.visit(`/teams/${props.team.slug}/board`);
+    router.visit(`/${props.team.slug}/board`);
 };
 </script>
 

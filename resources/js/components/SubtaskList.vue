@@ -33,7 +33,7 @@ const editForm = useForm({
 });
 
 const addSubtask = () => {
-    newSubtaskForm.post(`/teams/${props.teamSlug}/cards/${props.cardId}/subtasks`, {
+    newSubtaskForm.post(`/${props.teamSlug}/cards/${props.cardId}/subtasks`, {
         preserveScroll: true,
         onSuccess: () => {
             newSubtaskForm.reset();
@@ -48,7 +48,7 @@ const startEdit = (subtask: any) => {
 };
 
 const saveEdit = (subtask: any) => {
-    editForm.put(`/teams/${props.teamSlug}/cards/${props.cardId}/subtasks/${subtask.id}`, {
+    editForm.put(`/${props.teamSlug}/cards/${props.cardId}/subtasks/${subtask.id}`, {
         preserveScroll: true,
         onSuccess: () => {
             editingId.value = null;
@@ -58,7 +58,7 @@ const saveEdit = (subtask: any) => {
 };
 
 const toggleComplete = (subtask: any) => {
-    router.put(`/teams/${props.teamSlug}/cards/${props.cardId}/subtasks/${subtask.id}`, {
+    router.put(`/${props.teamSlug}/cards/${props.cardId}/subtasks/${subtask.id}`, {
         is_completed: !subtask.is_completed,
     }, {
         preserveScroll: true,
@@ -67,7 +67,7 @@ const toggleComplete = (subtask: any) => {
 
 const deleteSubtask = (subtask: any) => {
     if (confirm('Are you sure?')) {
-        router.delete(`/teams/${props.teamSlug}/cards/${props.cardId}/subtasks/${subtask.id}`, {
+        router.delete(`/${props.teamSlug}/cards/${props.cardId}/subtasks/${subtask.id}`, {
             preserveScroll: true,
         });
     }

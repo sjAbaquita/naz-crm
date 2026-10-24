@@ -10,8 +10,9 @@ use App\Http\Requests\UpdateSubtaskRequest;
 use App\Models\BoardCard;
 use App\Models\Subtask;
 use App\Models\Team;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class SubtaskController extends Controller
 {
@@ -34,25 +35,27 @@ class SubtaskController extends Controller
         return response()->json(['subtasks' => $subtasks]);
     }
 
-    public function store(StoreSubtaskRequest $request, Team $currentTeam, int $card, CreateSubtask $createSubtask): JsonResponse
+    public function store(StoreSubtaskRequest $request, Team $currentTeam, int $card, CreateSubtask $createSubtask): JsonResponse | RedirectResponse
     {
         $card = $this->getCard($currentTeam, $card);
 
         $subtask = $createSubtask->handle($card, $request->validated(), $request->user()->id);
 
-        return response()->json(['subtask' => $subtask->load('creator:id,name')], 201);
+        // return response()->json(['subtask' => $subtask->load('creator:id,name')], 201);
+		return to_route('board.index', $currentTeam);
     }
 
-    public function update(UpdateSubtaskRequest $request, Team $currentTeam, int $card, Subtask $subtask, UpdateSubtask $updateSubtask): JsonResponse
+    public function update(UpdateSubtaskRequest $request, Team $currentTeam, int $card, Subtask $subtask, UpdateSubtask $updateSubtask): JsonResponse | RedirectResponse
     {
         $card = $this->getCard($currentTeam, $card);
 
         $subtask = $updateSubtask->handle($subtask, $request->validated(), $request->user()->id);
 
-        return response()->json(['subtask' => $subtask->load('creator:id,name', 'updater:id,name')]);
+        // return response()->json(['subtask' => $subtask->load('creator:id,name', 'updater:id,name')]);
+		return to_route('board.index', $currentTeam);
     }
 
-    public function destroy(Request $request, Team $currentTeam, int $card, Subtask $subtask, DeleteSubtask $deleteSubtask): JsonResponse
+    public function destroy(Request $request, Team $currentTeam, int $card, Subtask $subtask, DeleteSubtask $deleteSubtask): JsonResponse | RedirectResponse
     {
         if ($request->user()->id !== $subtask->created_by) {
             abort(403);
@@ -60,6 +63,7 @@ class SubtaskController extends Controller
 
         $deleteSubtask->handle($subtask);
 
-        return response()->json(['message' => 'Subtask deleted']);
+        // return response()->json(['message' => 'Subtask deleted']);
+		return to_route('board.index', $currentTeam);
     }
 }

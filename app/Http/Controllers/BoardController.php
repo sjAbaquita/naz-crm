@@ -18,7 +18,7 @@ class BoardController extends Controller
         $board = $currentTeam->board()
             ->with([
                 'columns' => fn ($q) => $q->orderBy('position'),
-                'columns.cards' => fn ($q) => $q->orderBy('position')->with('assignee:id,name,email', 'labels'),
+                'columns.cards' => fn ($q) => $q->orderBy('position')->with('assignee:id,name,email', 'labels', 'subtasks', 'dependencies'),
             ])
             ->firstOrFail();
 

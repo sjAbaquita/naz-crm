@@ -11,9 +11,14 @@ use Inertia\Response;
 
 class TaskController extends Controller
 {
-    public function show(Request $request, Team $currentTeam, BoardCard $card): Response
+    public function show(Request $request, Team $currentTeam, int $cardId): Response
     {
         $role = $request->user()->teamRole($currentTeam);
+
+        $card = BoardCard::query()
+            ->whereKey($cardId)
+            ->whereHas('column', fn ($q) => $q->where('board_id', $currentTeam->board()->value('id')))
+            ->firstOrFail();
 
         $card->load([
             'subtasks' => fn ($q) => $q->orderBy('position')->with('creator:id,name', 'updater:id,name'),

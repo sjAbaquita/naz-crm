@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BoardCardDependencyController;
 use App\Http\Controllers\BoardCardController;
 use App\Http\Controllers\BoardColumnController;
 use App\Http\Controllers\BoardController;
@@ -31,6 +32,9 @@ Route::prefix('{current_team}')
 
         // Task detail page
         Route::get('/cards/{card}', [TaskController::class, 'show'])->name('tasks.show');
+
+        // Dependency routes
+        Route::post('/cards/{card}/dependencies', [BoardCardDependencyController::class, 'store'])->name('cards.dependencies.store');
 
         Route::get('/labels', [LabelController::class, 'index'])->name('labels.index');
         Route::post('/labels', [LabelController::class, 'store'])->name('labels.store');

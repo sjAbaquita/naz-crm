@@ -4,16 +4,18 @@ namespace App\Policies;
 
 use App\Models\Attachment;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
+use App\Models\Team;
+use App\Enums\TeamRole;
 
 class AttachmentPolicy
 {
     /**
-     * Determine whether the user can view any models.
+     * Determine whether the user can create models.
      */
-    public function viewAny(User $user): bool
+    public function create(User $user, Team $team): bool
     {
-        return false;
+        $membership = $user->memberships()->where('team_id', $team->id)->first();
+        return $membership !== null;
     }
 
     /**
@@ -21,23 +23,7 @@ class AttachmentPolicy
      */
     public function view(User $user, Attachment $attachment): bool
     {
-        return false;
-    }
-
-    /**
-     * Determine whether the user can create models.
-     */
-    public function create(User $user): bool
-    {
-        return false;
-    }
-
-    /**
-     * Determine whether the user can update the model.
-     */
-    public function update(User $user, Attachment $attachment): bool
-    {
-        return false;
+        return $this->canAccess($user, $attachment);
     }
 
     /**
@@ -45,22 +31,26 @@ class AttachmentPolicy
      */
     public function delete(User $user, Attachment $attachment): bool
     {
-        return false;
+        return $this->canAccess($user, $attachment);
     }
 
-    /**
-     * Determine whether the user can restore the model.
-     */
-    public function restore(User $user, Attachment $attachment): bool
+    protected function canAccess(User $user, Attachment $attachment): bool
     {
-        return false;
-    }
+        $card = $attachment->boardCard;
+        if (!$card) return false;
 
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
-    public function forceDelete(User $user, Attachment $attachment): bool
-    {
-        return false;
+        $team = $card->team;
+        if (!$team) return false;
+
+        $membership = $user->memberships()->where('team_id', $team->id)->first();
+        if (!$membership) return false;
+
+        // Admin/Owner can access
+        if ($membership->role->isAtLeast(TeamRole::Admin)) {
+            return true;
+        }
+
+        // Creator or Assignee
+        return $attachment->uploaded_by === $user->id || $card->assigned_to === $user->id;
     }
 }

@@ -15,7 +15,7 @@ class TaskController extends Controller
     {
         $role = $request->user()->teamRole($currentTeam);
 
-        $card = BoardCard::query()
+        $card = BoardCard::query()->with('attachments')
             ->whereKey($cardId)
             ->whereHas('column', fn ($q) => $q->where('board_id', $currentTeam->board()->value('id')))
             ->firstOrFail();

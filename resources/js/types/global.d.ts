@@ -27,10 +27,14 @@ declare module '@inertiajs/core' {
     }
 }
 
+declare global {
+    function route(name?: string, params?: Record<string, any> | Array<any>, absolute?: boolean, config?: any): any;
+}
+
 declare module 'vue' {
     interface ComponentCustomProperties {
-        $inertia: typeof Router;
-        $page: Page;
-        $headManager: ReturnType<typeof createHeadManager>;
+        $inertia: any;
+        $page: any;
+        $headManager: any;
     }
 }

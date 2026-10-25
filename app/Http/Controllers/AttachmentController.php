@@ -14,19 +14,11 @@ class AttachmentController extends Controller
     /**
      * Store a new attachment for a board card.
      */
-    public function store(Request $request, string $team, int $cardId)
+    public function store(\App\Http\Requests\Attachment\StoreAttachmentRequest $request, string $team, int $cardId)
     {
-        // Authorization (placeholder – will be enforced via policy later)
-        $this->authorize('create', Attachment::class);
-
-        // Basic validation (will be refined in a FormRequest later)
-        $validated = $request->validate([
-            'file' => ['required', 'file', 'max:10240', 'mimetypes:image/*,application/pdf,video/*'],
-        ]);
-
         $card = BoardCard::findOrFail($cardId);
 
-        $file = $validated['file'];
+        $file = $request->validated()['file'];
         $path = $file->store('attachments', 'public');
 
         $attachment = Attachment::create([

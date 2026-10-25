@@ -11,7 +11,7 @@ class StoreAttachmentRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return $this->user()->can('create', [\App\Models\Attachment::class, $this->route('team')]);
     }
 
     /**
@@ -22,7 +22,7 @@ class StoreAttachmentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'file' => ['required', 'file', 'max:10240', 'mimetypes:image/*,application/pdf,video/*'],
         ];
     }
 }

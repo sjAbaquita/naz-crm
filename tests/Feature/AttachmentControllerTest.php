@@ -15,7 +15,7 @@ class AttachmentControllerTest extends TestCase
      * @test
      * @return void
      */
-    public function -non_member_cannot_upload_attachments()
+    public function non_member_cannot_upload_attachments()
     {
         $this->markTestIncomplete('This test needs to be implemented.');
     }

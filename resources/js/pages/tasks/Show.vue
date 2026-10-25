@@ -60,7 +60,7 @@ const goBack = () => {
 
 const reloadCard = () => {
     // Reload the card data without closing the modal
-    router.reload({ preserveState: true, only: ['card'] });
+    router.reload({ preserveState: true, only: ['card'] } as any);
 };
 </script>
 

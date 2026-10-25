@@ -57,6 +57,11 @@ const canEditSubtask = (subtask: any) => {
 const goBack = () => {
     router.visit(`/${props.team.slug}/board`);
 };
+
+const reloadCard = () => {
+    // Reload the card data without closing the modal
+    router.reload({ preserveState: true, only: ['card'] });
+};
 </script>
 
 <template>

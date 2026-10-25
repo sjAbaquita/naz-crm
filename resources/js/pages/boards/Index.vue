@@ -34,6 +34,9 @@ const cardForm = useForm({
     column_id: null as number | null,
     assigned_to: null as number | null,
     labels: [] as number[],
+    start_date: '',
+    due_date: '',
+    priority: 'Low',
 })
 
 const columnForm = useForm({
@@ -172,6 +175,9 @@ const openCardModal = (card: BoardCard) => {
     cardForm.column_id = card.column_id
     cardForm.assigned_to = card.assigned_to || null
     cardForm.labels = card.labels?.map(l => l.id) || []
+    cardForm.start_date = card.start_date || ''
+    cardForm.due_date = card.due_date || ''
+    cardForm.priority = card.priority || 'Low'
     loadCardActivity(card)
     showCardModal.value = true
 }
@@ -182,6 +188,9 @@ const openAddCardModal = (columnId: number) => {
     cardForm.reset()
     cardForm.column_id = columnId
     cardForm.assigned_to = null
+    cardForm.start_date = ''
+    cardForm.due_date = ''
+    cardForm.priority = 'Low'
     showCardModal.value = true
 }
 
@@ -234,6 +243,23 @@ const closeModal = () => {
     editingCard.value = null
     cardForm.reset()
 }
+
+const refreshCardSubtasks = () => {
+    router.reload({
+        only: ['board'],
+        onSuccess: (page) => {
+            const updatedBoard = page.props.board as Board;
+
+            const updatedCard = updatedBoard.columns
+                ?.flatMap(column => column.cards ?? [])
+                .find(card => card.id === editingCard.value?.id);
+
+            if (updatedCard && editingCard.value) {
+                editingCard.value.subtasks = updatedCard.subtasks ?? [];
+            }
+        },
+    });
+};
 
 onMounted(() => {
     initDrag()
@@ -409,6 +435,40 @@ defineOptions({
                         </select>
                     </div>
 
+                    <!-- Start Date Input -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                        <input
+                            v-model="cardForm.start_date"
+                            type="date"
+                            class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                        />
+                    </div>
+
+                    <!-- Due Date Input -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Due Date</label>
+                        <input
+                            v-model="cardForm.due_date"
+                            type="date"
+                            class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                        />
+                    </div>
+
+                    <!-- Priority Selector -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority</label>
+                        <select
+                            v-model="cardForm.priority"
+                            class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                        >
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                            <option value="Urgent">Urgent</option>
+                        </select>
+                    </div>
+
 					<div v-if="1 !== 1">
 						<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Labels</label>
 						<select
@@ -445,6 +505,7 @@ defineOptions({
                                 :canCreate="true"
                                 :canEdit="(subtask) => subtask.created_by === ($page.props.auth as any).user.id"
                                 :teamSlug="props.currentTeam.slug"
+    							@refresh="refreshCardSubtasks"
                             />
                         </div>
 

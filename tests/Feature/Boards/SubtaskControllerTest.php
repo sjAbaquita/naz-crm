@@ -14,7 +14,7 @@ test('assignee can create subtask for card', function () {
         ->post(route('subtasks.store', [$team, $card]), [
             'title' => 'New subtask',
         ])
-        ->assertCreated();
+        ->assertRedirect();
 
     $this->assertDatabaseHas('subtasks', [
         'board_card_id' => $card->id,

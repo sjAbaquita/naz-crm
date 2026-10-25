@@ -27,6 +27,9 @@ class StoreBoardCardRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
+            'start_date' => ['nullable', 'date'],
+            'due_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'priority' => ['nullable', 'string', 'in:Low,Medium,High,Urgent'],
         ];
     }
 }

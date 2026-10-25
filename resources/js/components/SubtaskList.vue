@@ -19,6 +19,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const emit = defineEmits(['refresh']);
 const page = usePage();
 const currentUser = computed(() => (page.props.auth as any).user);
 
@@ -37,7 +38,7 @@ const addSubtask = () => {
         preserveScroll: true,
         onSuccess: () => {
             newSubtaskForm.reset();
-            showAddForm.value = false;
+            emit('refresh');
         },
     });
 };
@@ -53,6 +54,7 @@ const saveEdit = (subtask: any) => {
         onSuccess: () => {
             editingId.value = null;
             editForm.reset();
+            emit('refresh');
         },
     });
 };
@@ -62,6 +64,9 @@ const toggleComplete = (subtask: any) => {
         is_completed: !subtask.is_completed,
     }, {
         preserveScroll: true,
+        onSuccess: () => {
+            emit('refresh');
+        },
     });
 };
 
@@ -69,6 +74,10 @@ const deleteSubtask = (subtask: any) => {
     if (confirm('Are you sure?')) {
         router.delete(`/${props.teamSlug}/cards/${props.cardId}/subtasks/${subtask.id}`, {
             preserveScroll: true,
+            onSuccess: () => {
+                // router.visit(`/${props.teamSlug}/board`, { preserveScroll: false });
+				emit('refresh');
+            },
         });
     }
 };

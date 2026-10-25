@@ -10,9 +10,9 @@ use App\Http\Requests\UpdateSubtaskRequest;
 use App\Models\BoardCard;
 use App\Models\Subtask;
 use App\Models\Team;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Inertia\Inertia;
 
 class SubtaskController extends Controller
 {
@@ -24,38 +24,34 @@ class SubtaskController extends Controller
             ->firstOrFail();
     }
 
-    public function index(Request $request, Team $currentTeam, int $card): JsonResponse
+    public function index(Team $currentTeam, int $card): Response
     {
-        $card = $this->getCard($currentTeam, $card);
-
-        $subtasks = $card->subtasks()
-            ->with('creator:id,name', 'updater:id,name')
-            ->get();
-
-        return response()->json(['subtasks' => $subtasks]);
-    }
-
-    public function store(StoreSubtaskRequest $request, Team $currentTeam, int $card, CreateSubtask $createSubtask): JsonResponse | RedirectResponse
-    {
-        $card = $this->getCard($currentTeam, $card);
-
-        $subtask = $createSubtask->handle($card, $request->validated(), $request->user()->id);
-
-        // return response()->json(['subtask' => $subtask->load('creator:id,name')], 201);
+        // This endpoint is not used directly by the UI; redirect to board index.
+        // return Inertia::location(route('board.index', $currentTeam));
 		return to_route('board.index', $currentTeam);
     }
 
-    public function update(UpdateSubtaskRequest $request, Team $currentTeam, int $card, Subtask $subtask, UpdateSubtask $updateSubtask): JsonResponse | RedirectResponse
+    public function store(StoreSubtaskRequest $request, Team $currentTeam, int $card, CreateSubtask $createSubtask): Response
     {
         $card = $this->getCard($currentTeam, $card);
 
-        $subtask = $updateSubtask->handle($subtask, $request->validated(), $request->user()->id);
+        $createSubtask->handle($card, $request->validated(), $request->user()->id);
 
-        // return response()->json(['subtask' => $subtask->load('creator:id,name', 'updater:id,name')]);
+        // return Inertia::location(route('board.index', $currentTeam));
 		return to_route('board.index', $currentTeam);
     }
 
-    public function destroy(Request $request, Team $currentTeam, int $card, Subtask $subtask, DeleteSubtask $deleteSubtask): JsonResponse | RedirectResponse
+    public function update(UpdateSubtaskRequest $request, Team $currentTeam, int $card, Subtask $subtask, UpdateSubtask $updateSubtask): Response
+    {
+        $card = $this->getCard($currentTeam, $card);
+
+        $updateSubtask->handle($subtask, $request->validated(), $request->user()->id);
+
+        // return Inertia::location(route('board.index', $currentTeam));
+		return to_route('board.index', $currentTeam);
+    }
+
+    public function destroy(Request $request, Team $currentTeam, int $card, Subtask $subtask, DeleteSubtask $deleteSubtask): Response
     {
         if ($request->user()->id !== $subtask->created_by) {
             abort(403);
@@ -63,7 +59,7 @@ class SubtaskController extends Controller
 
         $deleteSubtask->handle($subtask);
 
-        // return response()->json(['message' => 'Subtask deleted']);
+        // return Inertia::location(route('board.index', $currentTeam));
 		return to_route('board.index', $currentTeam);
     }
 }

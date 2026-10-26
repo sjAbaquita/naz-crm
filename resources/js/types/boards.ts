@@ -38,6 +38,18 @@ export type BoardCardDependency = {
 };
 
 // Update BoardCard type:
+export type Attachment = {
+    id: number;
+    board_card_id: number;
+    filename: string;
+    filepath: string;
+    mime_type: string;
+    size: number;
+    uploaded_by: number;
+    created_at: string;
+    updated_at: string;
+};
+
 export type BoardCard = {
     id: number;
     column_id: number;
@@ -53,6 +65,7 @@ export type BoardCard = {
     subtasks?: Subtask[];
     dependencies?: BoardCardDependency[];
     is_completable?: boolean;
+    attachments?: Attachment[];
 };
 
 export type Card = BoardCard;

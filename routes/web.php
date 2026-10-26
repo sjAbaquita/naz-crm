@@ -26,3 +26,4 @@ Route::middleware(['auth'])->group(function () {
 require __DIR__.'/settings.php';
 require __DIR__.'/calendar.php';
 require __DIR__.'/boards.php';
+require __DIR__.'/attachments.php';

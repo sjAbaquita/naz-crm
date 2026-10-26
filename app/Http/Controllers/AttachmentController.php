@@ -2,11 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Attachment\StoreAttachmentRequest;
 use App\Models\Attachment;
 use App\Models\BoardCard;
+use App\Models\Team;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AttachmentController extends Controller
@@ -14,10 +19,8 @@ class AttachmentController extends Controller
     /**
      * Store a new attachment for a board card.
      */
-    public function store(\App\Http\Requests\Attachment\StoreAttachmentRequest $request, string $team, int $cardId)
+    public function store(StoreAttachmentRequest $request, Team $currentTeam, BoardCard $card): Response
     {
-        $card = BoardCard::findOrFail($cardId);
-
         $file = $request->validated()['file'];
         $path = $file->store('attachments', 'public');
 
@@ -30,16 +33,17 @@ class AttachmentController extends Controller
             'uploaded_by'   => $request->user()->id,
         ]);
 
-        return response()->json(['attachment' => $attachment], 201);
+        // return response()->json(['attachment' => $attachment], 201);
+				return to_route('board.index', $currentTeam);
+		return to_route('board.index', $currentTeam);
     }
 
     /**
      * Download an attachment.
      */
-    public function download(string $team, int $cardId, int $attachmentId)
+    public function download(Request $request, Team $currentTeam, BoardCard $card, Attachment $attachment): StreamedResponse
     {
-        $attachment = Attachment::findOrFail($attachmentId);
-        $this->authorize('view', $attachment);
+        Gate::authorize('view', $attachment);
 
         return Storage::disk('public')->download($attachment->filepath, $attachment->filename);
     }
@@ -47,14 +51,13 @@ class AttachmentController extends Controller
     /**
      * Delete an attachment.
      */
-    public function destroy(string $team, int $cardId, int $attachmentId)
+    public function destroy(Request $request, Team $currentTeam, BoardCard $card, Attachment $attachment): Response
     {
-        $attachment = Attachment::findOrFail($attachmentId);
-        $this->authorize('delete', $attachment);
+        Gate::authorize('delete', $attachment);
 
         Storage::disk('public')->delete($attachment->filepath);
         $attachment->delete();
 
-        return response()->noContent();
+        return to_route('board.index', $currentTeam);
     }
 }

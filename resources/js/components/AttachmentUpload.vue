@@ -4,11 +4,14 @@ import { Button } from '@/components/ui/button';
 import InputError from '@/components/InputError.vue';
 import { Loader2, Paperclip } from 'lucide-vue-next';
 import { ref } from 'vue';
+import attachmentRouter from '@/routes/attachments';
 
 const props = defineProps<{
     cardId: number | string;
     teamSlug: string;
 }>();
+
+const emit = defineEmits(['refresh']);
 
 const fileInput = ref<HTMLInputElement | null>(null);
 
@@ -17,13 +20,18 @@ const form = useForm({
 });
 
 const submit = () => {
-    form.post(route('attachments.store', { team: props.teamSlug, card: props.cardId }), {
+    const url = attachmentRouter.store({
+        current_team: props.teamSlug,
+        card: props.cardId,
+    }).url;
+    form.post(url, {
         preserveScroll: true,
         onSuccess: () => {
             form.reset();
             if (fileInput.value) {
                 fileInput.value.value = '';
             }
+            emit('refresh');
         },
     });
 };

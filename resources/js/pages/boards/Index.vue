@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { router, useForm, usePage } from '@inertiajs/vue3'
+import { Link } from '@inertiajs/vue3'
 import { Plus, Trash2, X, User, ChevronDown, ChevronRight } from 'lucide-vue-next';
-import { Link } from '@inertiajs/vue3';
-import SubtaskList from '@/components/SubtaskList.vue';
 import Sortable from 'sortablejs'
-import { ref, onMounted, nextTick, watch, computed } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
+import AttachmentList from '@/components/AttachmentList.vue';
+import AttachmentUpload from '@/components/AttachmentUpload.vue';
+import SubtaskList from '@/components/SubtaskList.vue';
 
 import cardsRoutes from '@/routes/cards';
 import columnRoutes from '@/routes/column';
@@ -261,6 +263,27 @@ const refreshCardSubtasks = () => {
     });
 };
 
+// Refresh the entire card (including attachments) after an attachment action
+const refreshCard = () => {
+    router.reload({
+        only: ['board'],
+        onSuccess: (page) => {
+            const updatedBoard = page.props.board as Board;
+            const updatedCard = updatedBoard.columns
+                ?.flatMap(column => column.cards ?? [])
+                .find(card => card.id === editingCard.value?.id);
+
+            if (updatedCard && editingCard.value) {
+                // Update all card fields that could have changed, especially attachments
+                editingCard.value = {
+                    ...editingCard.value,
+                    ...updatedCard,
+                } as any;
+            }
+        },
+    });
+};
+
 onMounted(() => {
     initDrag()
 })
@@ -508,6 +531,21 @@ defineOptions({
     							@refresh="refreshCardSubtasks"
                             />
                         </div>
+						<div v-if="!isAddingCard && editingCard" class="border-t border-gray-100 dark:border-gray-800 pt-4 mt-4">
+							<AttachmentUpload
+								:cardId="editingCard.id"
+								:teamSlug="props.currentTeam.slug"
+								@refresh="refreshCard"
+							/>
+						</div>
+						<div v-if="!isAddingCard && editingCard && editingCard.attachments && editingCard.attachments.length > 0" class="border-t border-gray-100 dark:border-gray-800 pt-4 mt-4">
+							<AttachmentList
+								:attachments="editingCard.attachments || []"
+								:cardId="editingCard.id"
+								:teamSlug="props.currentTeam.slug"
+								@refresh="refreshCard"
+							/>
+						</div>
 
                     <div v-if="!isAddingCard && cardActivityLog.length > 0" class="border-t border-gray-100 dark:border-gray-800 pt-4 mt-4">
                         <button

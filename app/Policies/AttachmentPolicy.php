@@ -12,10 +12,10 @@ class AttachmentPolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user, Team $team): bool
+    public function create(User $user): bool
     {
-        $membership = $user->memberships()->where('team_id', $team->id)->first();
-        return $membership !== null;
+        // A user can create an attachment if they belong to any team (the team will be derived from the route).
+         return $user->teamMemberships()->exists();
     }
 
     /**
@@ -42,7 +42,7 @@ class AttachmentPolicy
         $team = $card->team;
         if (!$team) return false;
 
-        $membership = $user->memberships()->where('team_id', $team->id)->first();
+        $membership = $user->teamMemberships()->where('team_id', $team->id)->first();
         if (!$membership) return false;
 
         // Admin/Owner can access

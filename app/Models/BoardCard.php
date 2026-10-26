@@ -73,4 +73,10 @@ class BoardCard extends Model
     {
         return $this->column?->board?->team;
     }
+
+	public function attachments()
+	{
+		return $this->hasMany(Attachment::class);
+	}
+
 }

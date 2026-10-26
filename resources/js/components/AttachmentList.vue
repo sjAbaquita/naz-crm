@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal } from 'lucide-vue-next';
-import { defineEmits, defineProps } from 'vue';
+import attachmentRouter from '@/routes/attachments';
 
 const props = defineProps<{
     attachments: Array<{
@@ -19,11 +19,22 @@ const props = defineProps<{
 const emit = defineEmits(['refresh']);
 
 const download = (attachmentId: number | string) => {
-    router.visit(route('attachments.download', { team: props.teamSlug, card: props.cardId, attachment: attachmentId }));
+    const url = attachmentRouter.download({
+        current_team: props.teamSlug,
+        card: props.cardId,
+        attachment: attachmentId,
+    }).url;
+    // Open the download URL in a new tab to avoid navigating away from the modal
+    window.open(url, '_blank');
 };
 
 const del = (attachmentId: number | string) => {
-    router.delete(route('attachments.destroy', { team: props.teamSlug, card: props.cardId, attachment: attachmentId }), {
+    const url = attachmentRouter.destroy({
+        current_team: props.teamSlug,
+        card: props.cardId,
+        attachment: attachmentId,
+    }).url;
+    router.delete(url, {
         preserveScroll: true,
         onSuccess: () => emit('refresh'),
     });

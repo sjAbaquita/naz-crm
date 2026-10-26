@@ -166,6 +166,7 @@ const calendarEvents = computed(() => {
 
     return events.value.map(event => {
         let endDate: string | undefined = undefined;
+		
         if (event.end_date) {
             const d = new Date(event.end_date);
             d.setDate(d.getDate() + 1);

@@ -19,7 +19,7 @@ class AttachmentController extends Controller
     /**
      * Store a new attachment for a board card.
      */
-    public function store(StoreAttachmentRequest $request, Team $currentTeam, BoardCard $card): Response
+    public function store(StoreAttachmentRequest $request, Team $currentTeam, BoardCard $card): JsonResponse
     {
         $file = $request->validated()['file'];
         $path = $file->store('attachments', 'public');
@@ -34,8 +34,8 @@ class AttachmentController extends Controller
         ]);
 
         // return response()->json(['attachment' => $attachment], 201);
-				return to_route('board.index', $currentTeam);
-		return to_route('board.index', $currentTeam);
+				return response()->json(['attachment' => $attachment], 201);
+		return response()->json(['attachment' => $attachment], 201);
     }
 
     /**
@@ -58,6 +58,6 @@ class AttachmentController extends Controller
         Storage::disk('public')->delete($attachment->filepath);
         $attachment->delete();
 
-        return to_route('board.index', $currentTeam);
+        return response()->json(['attachment' => $attachment], 201);
     }
 }

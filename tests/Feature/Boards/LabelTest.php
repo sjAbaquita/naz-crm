@@ -53,7 +53,7 @@ test('users can create, update, and delete labels for a team', function () {
             'name' => 'Feature',
             'color' => '#3b82f6',
         ])
-        ->assertRedirect(route('labels.index', $team));
+        ->assertRedirect(route('board.index', $team));
 
     $this->assertDatabaseHas('labels', [
         'team_id' => $team->id,
@@ -69,7 +69,7 @@ test('users can create, update, and delete labels for a team', function () {
             'name' => 'High Priority',
             'color' => '#dc2626',
         ])
-        ->assertRedirect(route('labels.index', $team));
+        ->assertRedirect(route('board.index', $team));
 
     $this->assertDatabaseHas('labels', [
         'id' => $label->id,
@@ -80,7 +80,7 @@ test('users can create, update, and delete labels for a team', function () {
     // Destroy
     $this->actingAs($user)
         ->delete(route('labels.destroy', [$team, $label]))
-        ->assertRedirect(route('labels.index', $team));
+        ->assertRedirect(route('board.index', $team));
 
     $this->assertDatabaseMissing('labels', [
         'id' => $label->id,

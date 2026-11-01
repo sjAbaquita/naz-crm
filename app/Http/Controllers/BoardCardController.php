@@ -24,7 +24,7 @@ class BoardCardController extends Controller
         Gate::authorize('create', [BoardCard::class, $currentTeam]);
 
         $column = $this->column($currentTeam, $request->validated('column_id'));
-        $card = $createBoardCard->handle($column->id, $request->validated());
+        $card = $createBoardCard->handle($column->id, $request->validated(), $request->user()->id);
 
         // sync labels if provided
         if ($request->filled('labels')) {
@@ -56,8 +56,12 @@ class BoardCardController extends Controller
         $card = $this->card($currentTeam, $id);
         Gate::authorize('update', $card);
 
+        if ($request->has('is_completed') && $request->validated('is_completed')) {
+            app(\App\Actions\Board\CompleteBoardCard::class)->handle($card);
+        }
+
         $updateBoardCard = app(UpdateBoardCard::class);
-        $updateBoardCard->handle($card, $request->validated());
+        $updateBoardCard->handle($card, array_filter($request->validated(), fn($key) => $key !== 'is_completed', ARRAY_FILTER_USE_KEY));
 
         // sync labels if provided
         if ($request->filled('labels')) {

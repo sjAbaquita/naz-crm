@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { router, useForm, usePage } from '@inertiajs/vue3'
+import { Head, Link } from '@inertiajs/vue3'
 import { Plus, Trash2, X, User, ChevronDown, ChevronRight } from 'lucide-vue-next';
 import Sortable from 'sortablejs'
-import { ref, onMounted, nextTick, watch, computed } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
+import AttachmentList from '@/components/AttachmentList.vue';
+import AttachmentUpload from '@/components/AttachmentUpload.vue';
+import SubtaskList from '@/components/SubtaskList.vue';
 
 import cardsRoutes from '@/routes/cards';
 import columnRoutes from '@/routes/column';
@@ -32,6 +36,9 @@ const cardForm = useForm({
     column_id: null as number | null,
     assigned_to: null as number | null,
     labels: [] as number[],
+    start_date: '',
+    due_date: '',
+    priority: 'Low',
 })
 
 const columnForm = useForm({
@@ -43,8 +50,23 @@ const cardActivityLog = ref<{ action: string; description: string; created_at: s
 const showActivityLog = ref(false)
 const newLabelName = ref('')
 
-const loadCardActivity = (card: BoardCard) => {
-    // Filter activities related to this card from recent activities (shared via Inertia middleware)
+const loadCardActivity = async (card: BoardCard) => {
+    // Try the new activity endpoint first
+    try {
+        const response = await fetch(`/${props.currentTeam.slug}/cards/${card.id}/activity`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.card) {
+                cardActivityLog.value = [];
+                showActivityLog.value = false;
+                return;
+            }
+        }
+    } catch (error) {
+        console.error('Failed to fetch card activity, falling back to recent activities', error);
+    }
+
+    // Fallback to filtering recent activities (shared via Inertia middleware)
     const recentActivities = page.props.recentActivities as Activity[];
     const cardActivities = recentActivities.filter(a =>
         (a.subject_type === 'App\\Models\\BoardCard' || a.subject_type === 'App\\\\Models\\\\BoardCard')
@@ -170,6 +192,9 @@ const openCardModal = (card: BoardCard) => {
     cardForm.column_id = card.column_id
     cardForm.assigned_to = card.assigned_to || null
     cardForm.labels = card.labels?.map(l => l.id) || []
+    cardForm.start_date = card.start_date || ''
+    cardForm.due_date = card.due_date || ''
+    cardForm.priority = card.priority || 'Low'
     loadCardActivity(card)
     showCardModal.value = true
 }
@@ -180,6 +205,9 @@ const openAddCardModal = (columnId: number) => {
     cardForm.reset()
     cardForm.column_id = columnId
     cardForm.assigned_to = null
+    cardForm.start_date = ''
+    cardForm.due_date = ''
+    cardForm.priority = 'Low'
     showCardModal.value = true
 }
 
@@ -233,6 +261,44 @@ const closeModal = () => {
     cardForm.reset()
 }
 
+const refreshCardSubtasks = () => {
+    router.reload({
+        only: ['board'],
+        onSuccess: (page) => {
+            const updatedBoard = page.props.board as Board;
+
+            const updatedCard = updatedBoard.columns
+                ?.flatMap(column => column.cards ?? [])
+                .find(card => card.id === editingCard.value?.id);
+
+            if (updatedCard && editingCard.value) {
+                editingCard.value.subtasks = updatedCard.subtasks ?? [];
+            }
+        },
+    });
+};
+
+// Refresh the entire card (including attachments) after an attachment action
+const refreshCard = () => {
+    router.reload({
+        only: ['board'],
+        onSuccess: (page) => {
+            const updatedBoard = page.props.board as Board;
+            const updatedCard = updatedBoard.columns
+                ?.flatMap(column => column.cards ?? [])
+                .find(card => card.id === editingCard.value?.id);
+
+            if (updatedCard && editingCard.value) {
+                // Update all card fields that could have changed, especially attachments
+                editingCard.value = {
+                    ...editingCard.value,
+                    ...updatedCard,
+                } as any;
+            }
+        },
+    });
+};
+
 onMounted(() => {
     initDrag()
 })
@@ -257,6 +323,7 @@ defineOptions({
 </script>
 
 <template>
+	<Head title="Board" />
     <div class="flex flex-col p-4 h-[calc(100vh-80px)] overflow-hidden">
         <div class="flex justify-between items-center mb-4">
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Board</h1>
@@ -297,6 +364,19 @@ defineOptions({
                         <div v-if="card.labels && card.labels.length > 0" class="flex items-center gap-1 mt-2 pt-2 border-t border-gray-100 dark:border-gray-600">
                             <span v-for="label in card.labels" :key="label.id" class="w-2 h-2 rounded-full inline-block" :style="{ background: label.color }" />
                             <span v-for="label in card.labels" :key="`label-${label.id}`" class="text-xs font-medium text-gray-500 dark:text-gray-400 ml-1">{{ label.name }}</span>
+                        </div>
+
+                        <div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-600">
+                            <div v-if="card.subtasks && card.subtasks.length > 0" class="text-[10px] text-gray-500">
+                                {{ card.subtasks.filter(s => s.is_completed).length }}/{{ card.subtasks.length }} subtasks
+                            </div>
+                            <!-- <Link
+                                :href="`/${props.currentTeam.slug}/cards/${card.id}`"
+                                class="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                @click.stop
+                            >
+                                Details
+                            </Link> -->
                         </div>
                     </div>
                 </div>
@@ -343,7 +423,7 @@ defineOptions({
         <div v-if="showCardModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" @click="closeModal"></div>
 
-            <div class="relative w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden">
+            <div class="relative w-full max-w-4xl max-h-[90vh] bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden flex flex-col">
                 <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
                         {{ isAddingCard ? 'Add Card' : 'Card Details' }}
@@ -353,48 +433,86 @@ defineOptions({
                     </button>
                 </div>
 
-                <div class="p-6 space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
-                        <input
-                            v-model="cardForm.title"
-                            :readonly="!props.permissions.canEditCards && !isAddingCard"
-                            type="text"
-                            placeholder="Card title"
-                            class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
-                        />
+                <div class="p-6 overflow-y-auto">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
+                                <input
+                                    v-model="cardForm.title"
+                                    :readonly="!props.permissions.canEditCards && !isAddingCard"
+                                    type="text"
+                                    placeholder="Card title"
+                                    class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                                />
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                                <textarea
+                                    v-model="cardForm.description"
+                                    :readonly="!props.permissions.canEditCards && !isAddingCard"
+                                    rows="4"
+                                    placeholder="Add a more detailed description..."
+                                    class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow resize-none"
+                                ></textarea>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assignee</label>
+                                <select
+                                    v-model="cardForm.assigned_to"
+                                    :readonly="!props.permissions.canEditCards && !isAddingCard"
+                                    class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                                >
+                                    <option value="">Unassigned</option>
+                                    <option
+                                        v-for="member in props.teamMembers"
+                                        :key="member.id"
+                                        :value="member.id"
+                                    >
+                                        {{ member.name }} ({{ member.email }})
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                                    <input
+                                        v-model="cardForm.start_date"
+                                        type="date"
+                                        class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                                    />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Due Date</label>
+                                    <input
+                                        v-model="cardForm.due_date"
+                                        type="date"
+                                        class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority</label>
+                                <select
+                                    v-model="cardForm.priority"
+                                    class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                                >
+                                    <option value="Low">Low</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="High">High</option>
+                                    <option value="Urgent">Urgent</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
-                        <textarea
-                            v-model="cardForm.description"
-                            :readonly="!props.permissions.canEditCards && !isAddingCard"
-                            rows="4"
-                            placeholder="Add a more detailed description..."
-                            class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow resize-none"
-                        ></textarea>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assignee</label>
-                        <select
-                            v-model="cardForm.assigned_to"
-                            :readonly="!props.permissions.canEditCards && !isAddingCard"
-                            class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
-                        >
-                            <option value="">Unassigned</option>
-                            <option
-                                v-for="member in props.teamMembers"
-                                :key="member.id"
-                                :value="member.id"
-                            >
-                                {{ member.name }} ({{ member.email }})
-                            </option>
-                        </select>
-                    </div>
-
-					<div v-if="1 !== 1">
+					<div v-if="true">
 						<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Labels</label>
 						<select
 							v-model="cardForm.labels"
@@ -423,6 +541,32 @@ defineOptions({
 					</div>
 
                     <!-- Activity Log Accordion -->
+                        <div v-if="!isAddingCard && editingCard" class="border-t border-gray-100 dark:border-gray-800 pt-4 mt-4">
+                            <SubtaskList
+                                :cardId="editingCard.id"
+                                :subtasks="editingCard.subtasks || []"
+                                :canCreate="true"
+                                :canEdit="(subtask) => subtask.created_by === ($page.props.auth as any).user.id"
+                                :teamSlug="props.currentTeam.slug"
+    							@refresh="refreshCardSubtasks"
+                            />
+                        </div>
+						<div v-if="!isAddingCard && editingCard" class="border-t border-gray-100 dark:border-gray-800 pt-4 mt-4">
+							<AttachmentUpload
+								:cardId="editingCard.id"
+								:teamSlug="props.currentTeam.slug"
+								@refresh="refreshCard"
+							/>
+						</div>
+						<div v-if="!isAddingCard && editingCard && editingCard.attachments && editingCard.attachments.length > 0" class="border-t border-gray-100 dark:border-gray-800 pt-4 mt-4">
+							<AttachmentList
+								:attachments="editingCard.attachments || []"
+								:cardId="editingCard.id"
+								:teamSlug="props.currentTeam.slug"
+								@refresh="refreshCard"
+							/>
+						</div>
+
                     <div v-if="!isAddingCard && cardActivityLog.length > 0" class="border-t border-gray-100 dark:border-gray-800 pt-4 mt-4">
                         <button
                             @click="showActivityLog = !showActivityLog"

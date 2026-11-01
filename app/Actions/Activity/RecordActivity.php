@@ -13,14 +13,17 @@ class RecordActivity
      * Record a team activity.
      */
     public function handle(
-        Team|int $team,
+        Team|int|null $team,
         string $action,
         string $description,
         ?Model $subject = null,
         ?array $properties = null,
         ?int $userId = null
-    ): Activity {
+    ): ?Activity {
         $teamId = $team instanceof Team ? $team->id : $team;
+        if (!$teamId) {
+            return null;
+        }
         $userId = $userId ?? Auth::id();
 
         return Activity::create([

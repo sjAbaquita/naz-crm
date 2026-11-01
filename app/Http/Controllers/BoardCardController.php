@@ -24,7 +24,7 @@ class BoardCardController extends Controller
         Gate::authorize('create', [BoardCard::class, $currentTeam]);
 
         $column = $this->column($currentTeam, $request->validated('column_id'));
-        $card = $createBoardCard->handle($column->id, $request->validated());
+        $card = $createBoardCard->handle($column->id, $request->validated(), $request->user()->id);
 
         // sync labels if provided
         if ($request->filled('labels')) {

@@ -11,7 +11,7 @@ class StoreAttachmentRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->can('create', [\App\Models\Attachment::class, $this->route('team')]);
+        return $this->user()->can('create', [\App\Models\Attachment::class, $this->route('current_team')]);
     }
 
     /**
@@ -21,8 +21,26 @@ class StoreAttachmentRequest extends FormRequest
      */
     public function rules(): array
     {
+		$allowedMimeTypes = [
+			'image/*',
+			'application/pdf',
+			'video/*',
+
+			// Microsoft Word
+			'application/msword',
+			'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+
+			// Microsoft Excel
+			'application/vnd.ms-excel',
+			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+
+			// Microsoft PowerPoint
+			'application/vnd.ms-powerpoint',
+			'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+		];
+
         return [
-            'file' => ['required', 'file', 'max:10240', 'mimetypes:image/*,application/pdf,video/*'],
+            'file' => ['required', 'file', 'max:10240', 'mimetypes:' . implode(',', $allowedMimeTypes)],
         ];
     }
 }

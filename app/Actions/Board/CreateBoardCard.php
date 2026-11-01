@@ -13,15 +13,16 @@ class CreateBoardCard
     /**
      * Create a new board card
      */
-    public function handle(int $columnId, array $validatedData): BoardCard
+    public function handle(int $columnId, array $validatedData, ?int $userId = null): BoardCard
     {
-        return DB::transaction(function () use ($columnId, $validatedData) {
+        return DB::transaction(function () use ($columnId, $validatedData, $userId) {
             $column = BoardColumn::with('board')->findOrFail($columnId);
             $maxPosition = $column->cards()->max('position') ?? -1;
 
             $card = BoardCard::create([
                 ...$validatedData,
                 'column_id' => $columnId,
+                'created_by' => $userId,
                 'position' => $maxPosition + 1,
             ]);
 

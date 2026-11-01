@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\TeamPermission;
+use App\Enums\TeamRole;
 use App\Models\Team;
 use App\Models\User;
 

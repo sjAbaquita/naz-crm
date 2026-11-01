@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router, useForm, usePage } from '@inertiajs/vue3'
-import { Link } from '@inertiajs/vue3'
+import { Head, Link } from '@inertiajs/vue3'
 import { Plus, Trash2, X, User, ChevronDown, ChevronRight } from 'lucide-vue-next';
 import Sortable from 'sortablejs'
 import { ref, onMounted, nextTick, watch } from 'vue'
@@ -50,8 +50,23 @@ const cardActivityLog = ref<{ action: string; description: string; created_at: s
 const showActivityLog = ref(false)
 const newLabelName = ref('')
 
-const loadCardActivity = (card: BoardCard) => {
-    // Filter activities related to this card from recent activities (shared via Inertia middleware)
+const loadCardActivity = async (card: BoardCard) => {
+    // Try the new activity endpoint first
+    try {
+        const response = await fetch(`/${props.currentTeam.slug}/cards/${card.id}/activity`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.card) {
+                cardActivityLog.value = [];
+                showActivityLog.value = false;
+                return;
+            }
+        }
+    } catch (error) {
+        console.error('Failed to fetch card activity, falling back to recent activities', error);
+    }
+
+    // Fallback to filtering recent activities (shared via Inertia middleware)
     const recentActivities = page.props.recentActivities as Activity[];
     const cardActivities = recentActivities.filter(a =>
         (a.subject_type === 'App\\Models\\BoardCard' || a.subject_type === 'App\\\\Models\\\\BoardCard')
@@ -308,6 +323,7 @@ defineOptions({
 </script>
 
 <template>
+	<Head title="Board" />
     <div class="flex flex-col p-4 h-[calc(100vh-80px)] overflow-hidden">
         <div class="flex justify-between items-center mb-4">
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Board</h1>
@@ -354,13 +370,13 @@ defineOptions({
                             <div v-if="card.subtasks && card.subtasks.length > 0" class="text-[10px] text-gray-500">
                                 {{ card.subtasks.filter(s => s.is_completed).length }}/{{ card.subtasks.length }} subtasks
                             </div>
-                            <Link
+                            <!-- <Link
                                 :href="`/${props.currentTeam.slug}/cards/${card.id}`"
                                 class="text-xs text-blue-600 hover:text-blue-700 font-medium"
                                 @click.stop
                             >
                                 Details
-                            </Link>
+                            </Link> -->
                         </div>
                     </div>
                 </div>
@@ -407,7 +423,7 @@ defineOptions({
         <div v-if="showCardModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" @click="closeModal"></div>
 
-            <div class="relative w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden">
+            <div class="relative w-full max-w-4xl max-h-[90vh] bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden flex flex-col">
                 <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
                         {{ isAddingCard ? 'Add Card' : 'Card Details' }}
@@ -417,82 +433,86 @@ defineOptions({
                     </button>
                 </div>
 
-                <div class="p-6 space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
-                        <input
-                            v-model="cardForm.title"
-                            :readonly="!props.permissions.canEditCards && !isAddingCard"
-                            type="text"
-                            placeholder="Card title"
-                            class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
-                        />
+                <div class="p-6 overflow-y-auto">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
+                                <input
+                                    v-model="cardForm.title"
+                                    :readonly="!props.permissions.canEditCards && !isAddingCard"
+                                    type="text"
+                                    placeholder="Card title"
+                                    class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                                />
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                                <textarea
+                                    v-model="cardForm.description"
+                                    :readonly="!props.permissions.canEditCards && !isAddingCard"
+                                    rows="4"
+                                    placeholder="Add a more detailed description..."
+                                    class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow resize-none"
+                                ></textarea>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assignee</label>
+                                <select
+                                    v-model="cardForm.assigned_to"
+                                    :readonly="!props.permissions.canEditCards && !isAddingCard"
+                                    class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                                >
+                                    <option value="">Unassigned</option>
+                                    <option
+                                        v-for="member in props.teamMembers"
+                                        :key="member.id"
+                                        :value="member.id"
+                                    >
+                                        {{ member.name }} ({{ member.email }})
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                                    <input
+                                        v-model="cardForm.start_date"
+                                        type="date"
+                                        class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                                    />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Due Date</label>
+                                    <input
+                                        v-model="cardForm.due_date"
+                                        type="date"
+                                        class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority</label>
+                                <select
+                                    v-model="cardForm.priority"
+                                    class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                                >
+                                    <option value="Low">Low</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="High">High</option>
+                                    <option value="Urgent">Urgent</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
-                        <textarea
-                            v-model="cardForm.description"
-                            :readonly="!props.permissions.canEditCards && !isAddingCard"
-                            rows="4"
-                            placeholder="Add a more detailed description..."
-                            class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow resize-none"
-                        ></textarea>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assignee</label>
-                        <select
-                            v-model="cardForm.assigned_to"
-                            :readonly="!props.permissions.canEditCards && !isAddingCard"
-                            class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
-                        >
-                            <option value="">Unassigned</option>
-                            <option
-                                v-for="member in props.teamMembers"
-                                :key="member.id"
-                                :value="member.id"
-                            >
-                                {{ member.name }} ({{ member.email }})
-                            </option>
-                        </select>
-                    </div>
-
-                    <!-- Start Date Input -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
-                        <input
-                            v-model="cardForm.start_date"
-                            type="date"
-                            class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
-                        />
-                    </div>
-
-                    <!-- Due Date Input -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Due Date</label>
-                        <input
-                            v-model="cardForm.due_date"
-                            type="date"
-                            class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
-                        />
-                    </div>
-
-                    <!-- Priority Selector -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority</label>
-                        <select
-                            v-model="cardForm.priority"
-                            class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
-                        >
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                            <option value="Urgent">Urgent</option>
-                        </select>
-                    </div>
-
-					<div v-if="1 !== 1">
+					<div v-if="true">
 						<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Labels</label>
 						<select
 							v-model="cardForm.labels"

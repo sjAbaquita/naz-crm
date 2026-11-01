@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['column_id', 'title', 'description', 'position', 'assigned_to', 'start_date', 'due_date', 'priority', 'is_completed'])]
+#[Fillable(['column_id', 'created_by', 'title', 'description', 'position', 'assigned_to', 'start_date', 'due_date', 'priority', 'is_completed'])]
 class BoardCard extends Model
 {
     /** @use HasFactory<BoardCardFactory> */
@@ -17,6 +17,11 @@ class BoardCard extends Model
     public function column(): BelongsTo
     {
         return $this->belongsTo(BoardColumn::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function assignee(): BelongsTo

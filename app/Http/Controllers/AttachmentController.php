@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Activity\RecordActivity;
 use App\Http\Requests\Attachment\StoreAttachmentRequest;
 use App\Models\Attachment;
 use App\Models\BoardCard;
@@ -10,7 +11,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
-use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -19,7 +19,7 @@ class AttachmentController extends Controller
     /**
      * Store a new attachment for a board card.
      */
-    public function store(StoreAttachmentRequest $request, Team $currentTeam, BoardCard $card): JsonResponse
+    public function store(StoreAttachmentRequest $request, Team $currentTeam, BoardCard $card)
     {
         $file = $request->validated()['file'];
         $path = $file->store('attachments', 'public');
@@ -33,9 +33,18 @@ class AttachmentController extends Controller
             'uploaded_by'   => $request->user()->id,
         ]);
 
-        // return response()->json(['attachment' => $attachment], 201);
-				return response()->json(['attachment' => $attachment], 201);
-		return response()->json(['attachment' => $attachment], 201);
+        app(RecordActivity::class)->handle(
+            team: $currentTeam,
+            action: 'uploaded_attachment',
+            description: "uploaded attachment '{$attachment->filename}' to card '{$card->title}'",
+            subject: $card,
+            properties: ['attachment_id' => $attachment->id, 'filename' => $attachment->filename],
+        );
+
+        if ($request->expectsJson()) {
+            return response()->json(['attachment' => $attachment], 201);
+        }
+        return to_route('board.index', $currentTeam);
     }
 
     /**
@@ -51,13 +60,24 @@ class AttachmentController extends Controller
     /**
      * Delete an attachment.
      */
-    public function destroy(Request $request, Team $currentTeam, BoardCard $card, Attachment $attachment): Response
+    public function destroy(Request $request, Team $currentTeam, BoardCard $card, Attachment $attachment)
     {
         Gate::authorize('delete', $attachment);
 
         Storage::disk('public')->delete($attachment->filepath);
         $attachment->delete();
 
-        return response()->json(['attachment' => $attachment], 201);
+        app(RecordActivity::class)->handle(
+            team: $currentTeam,
+            action: 'deleted_attachment',
+            description: "deleted attachment from card '{$card->title}'",
+            subject: $card,
+            properties: ['filename' => $attachment->filename],
+        );
+
+        if ($request->expectsJson()) {
+            return response()->json(['attachment' => $attachment], 200);
+        }
+        return to_route('board.index', $currentTeam);
     }
 }

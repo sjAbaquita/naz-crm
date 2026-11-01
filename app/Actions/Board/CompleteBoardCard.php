@@ -2,6 +2,7 @@
 
 namespace App\Actions\Board;
 
+use App\Actions\Activity\RecordActivity;
 use App\Models\BoardCard;
 use Exception;
 
@@ -21,6 +22,13 @@ class CompleteBoardCard
 
         $card->is_completed = true;
         $card->save();
+
+        app(RecordActivity::class)->handle(
+            team: $card->column?->board?->team_id,
+            action: 'completed_card',
+            description: "marked card '{$card->title}' as completed",
+            subject: $card,
+        );
 
         return $card;
     }

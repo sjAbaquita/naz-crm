@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\BoardCard;
 use App\Models\BoardColumn;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -20,6 +21,7 @@ class BoardCardFactory extends Factory
     {
         return [
             'column_id' => BoardColumn::factory(),
+            'created_by' => User::factory(),
             'title' => $this->faker->sentence(3),
             'description' => $this->faker->optional()->paragraph(),
             'position' => 0,

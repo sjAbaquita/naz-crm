@@ -32,6 +32,7 @@ Route::prefix('{current_team}')
 
         // Task detail page
         Route::get('/cards/{card}', [TaskController::class, 'show'])->name('tasks.show');
+        Route::get('/cards/{card}/activity', [CardController::class, 'activity'])->name('cards.activity');
 
         // Dependency routes
         Route::post('/cards/{card}/dependencies', [BoardCardDependencyController::class, 'store'])->name('cards.dependencies.store');
